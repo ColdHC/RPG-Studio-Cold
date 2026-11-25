@@ -62,7 +62,7 @@ Não escolha **Use Claude's published identity**: o servidor não anuncia CIMD (
 
 ## Guia dentro da aplicação
 
-Os usuários encontram o atalho **Conexões MCP** no cabeçalho da página inicial (quando `MCP_ENABLED=true`). A página `/mcp` mostra a URL do servidor, o Client ID opcional, as conexões ativas/revogadas e o botão de revogação; o link **Ver passo a passo** abre `/help/mcp`, página pública com as instruções para Claude Web, Desktop e Code. A metadata OAuth aponta `service_documentation`/`resource_documentation` para `/help/mcp`.
+Quando `MCP_ENABLED=true`, o atalho **Conexões MCP** aparece em três pontos: cabeçalho da página inicial, seção **Integrações** da sidebar de campanha e cartão **Conexões MCP** em **Configurações** da campanha. A página `/mcp` mostra a URL do servidor, o Client ID opcional, as conexões ativas/revogadas e o botão de revogação; o link **Ver passo a passo** abre `/help/mcp`, página pública com as instruções para Claude Web, Desktop e Code. A metadata OAuth aponta `service_documentation`/`resource_documentation` para `/help/mcp`.
 
 ## Solução de problemas
 

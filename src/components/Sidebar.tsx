@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
+  Home,
   LayoutDashboard,
   FolderOpen,
   Users,
@@ -31,6 +32,7 @@ import {
   ChevronRight,
   Mail,
   Radio,
+  Plug,
   Menu,
   X
 } from 'lucide-react';
@@ -87,9 +89,10 @@ interface SidebarProps {
   symbolUrl?: string;
   role?: CampaignRole;
   favoriteFolders?: FavoriteFolderNavigation[];
+  showMcp?: boolean;
 }
 
-export function Sidebar({ campaignId, campaignName, campaignSubtitle, logoUrl, symbolUrl, role, favoriteFolders = [] }: SidebarProps) {
+export function Sidebar({ campaignId, campaignName, campaignSubtitle, logoUrl, symbolUrl, role, favoriteFolders = [], showMcp = false }: SidebarProps) {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -122,6 +125,7 @@ export function Sidebar({ campaignId, campaignName, campaignSubtitle, logoUrl, s
 
         <nav className={styles.section}>
           <div className={styles.sectionLabel}>Espaço de trabalho</div>
+          <Link href="/" prefetch={false} className={styles.navItem} onClick={closeMobile}><Home />Todas as campanhas</Link>
           {role === 'OWNER' && <Link href={base as never} className={`${styles.navItem} ${isActive('') ? styles.navItemActive : ''}`} onClick={closeMobile}><LayoutDashboard />Visão geral</Link>}
           {role === 'OWNER' && <Link href={`${base}/sala` as never} className={`${styles.navItem} ${isActive('/sala') ? styles.navItemActive : ''}`} onClick={closeMobile}><Radio />Sala de Sessão</Link>}
           {role === 'PLAYER' && PLAYER_NAV_ITEMS.map((item) => {
@@ -134,6 +138,14 @@ export function Sidebar({ campaignId, campaignName, campaignSubtitle, logoUrl, s
           <div className={styles.sectionLabel}>Referência</div>
           <Link href={`${base}${RULEBOOK_ITEM.href}` as never} className={`${styles.navItem} ${isActive(RULEBOOK_ITEM.href) ? styles.navItemActive : ''}`} onClick={closeMobile}><RULEBOOK_ITEM.icon />{RULEBOOK_ITEM.label}</Link>
         </nav>
+
+        {showMcp && <nav className={styles.section}>
+          <div className={styles.sectionLabel}>Integrações</div>
+          <Link href="/mcp" prefetch={false} className={`${styles.navItem} ${pathname === '/mcp' ? styles.navItemActive : ''}`} onClick={closeMobile}>
+            <Plug />
+            Conexões MCP
+          </Link>
+        </nav>}
 
         {role !== 'PLAYER' && <FavoritesSection campaignId={campaignId} initialFolders={favoriteFolders} />}
 

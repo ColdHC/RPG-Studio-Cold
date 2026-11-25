@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
 import { getCampaignAccess } from '@/lib/access';
+import { isMcpEnabled } from '@/lib/mcp/config';
 import { Sidebar } from '@/components/Sidebar';
 import { CampaignHeader } from '@/components/CampaignHeader';
 import { CampaignThemeRuntime } from '@/components/CampaignThemeRuntime';
@@ -41,6 +42,7 @@ export default async function CampaignLayout({
         symbolUrl={publishedTheme?.config.identity.symbolUrl}
         role={access.role}
         favoriteFolders={campaign.favoriteFolders}
+        showMcp={isMcpEnabled()}
       />
       <div className={styles.content}>
         <CampaignHeader

@@ -30,6 +30,8 @@ export function CampaignHeader({ campaignId, campaignName, subtitle, bannerUrl, 
       <div className={styles.context}>
         <span className={styles.product}><Layers3 size={13} aria-hidden="true" /> {subtitle || 'Workspace de campanha'}</span>
         <div className={styles.crumbs} aria-label="Localização atual">
+          <Link href="/" className={styles.homeCrumb}>Todas as campanhas</Link>
+          <ChevronRight size={14} aria-hidden="true" />
           <Link href={`/campaigns/${campaignId}` as never}>{campaignName}</Link>
           {!isRoot && <><ChevronRight size={14} aria-hidden="true" /><span>{location}</span></>}
         </div>

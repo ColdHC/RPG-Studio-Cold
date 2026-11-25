@@ -7,7 +7,7 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 ### Added
 
 - Página pública `/help/mcp` com instruções de conexão para Claude Web, Desktop e Code, linkada a partir de `/mcp` e da metadata OAuth como documentação do serviço/recurso.
-- Atalho **Conexões MCP** no cabeçalho global da página inicial quando o servidor MCP está habilitado.
+- Atalho **Conexões MCP** no cabeçalho global da página inicial, na sidebar da campanha e no centro de controle de Configurações quando o servidor MCP está habilitado.
 - Configuração opcional `MCP_CLAUDE_CLIENT_ID` para exibir o Client ID público nas instruções quando o cliente não usa registro automático.
 - Grafo de Relações administrativo com filtros, auto-layout, posições locais, navegação, edição e exclusão usando o serviço oficial de relacionamentos.
 - Relatório técnico `docs/RELATIONSHIP_GRAPH_AND_COMPILER_V6.md`.
@@ -25,6 +25,7 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 
 ### Changed
 
+- Cabeçalho e sidebar das campanhas passaram a oferecer atalho explícito de retorno à lista de campanhas.
 - Compilador V6 passou a iniciar recolhido no dashboard, carregar o diagnóstico sob demanda e persistir a preferência por usuário/campanha.
 - Shell da campanha e listas de arquivos passaram a aceitar carregamento inicial e consultas compatíveis paralelas.
 - Páginas e componentes receberam contenção responsiva.

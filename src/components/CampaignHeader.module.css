@@ -7,6 +7,7 @@
 .crumbs { display: flex; min-width: 0; align-items: center; gap: 6px; margin-top: 3px; color: var(--color-text); font-family: var(--font-display); font-size: var(--font-size-h3); font-weight: var(--font-weight-semibold); }
 .crumbs a { overflow: hidden; color: var(--color-text); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .crumbs a:hover { color: var(--color-accent); }
+.crumbs .homeCrumb { color: var(--color-text-faint); font-family: var(--font-body, inherit); font-size: 12px; font-weight: var(--font-weight-medium); }
 .crumbs span { overflow: hidden; color: var(--color-text-muted); text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 720px) { .header { min-height: 64px; padding: var(--space-3) var(--space-4) var(--space-3) 64px; } .product { display: none; } .crumbs { margin-top: 0; font-size: .9375rem; } }
