@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         authorization_servers: [config.issuer],
         bearer_methods_supported: ['header'],
         scopes_supported: MCP_SCOPES,
-        resource_documentation: `${config.baseUrl}/docs/mcp/README.md`
+        resource_documentation: `${config.baseUrl}/help/mcp`
       },
       200,
       { ...corsHeaders(request, config, { allowAnyOrigin: true }), Vary: 'Origin' }

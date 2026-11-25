@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         scopes_supported: MCP_SCOPES,
         resource_indicators_supported: true,
         authorization_response_iss_parameter_supported: true,
-        service_documentation: `${config.baseUrl}/docs/mcp/README.md`
+        service_documentation: `${config.baseUrl}/help/mcp`
       },
       200,
       { ...corsHeaders(request, config, { allowAnyOrigin: true }), Vary: 'Origin' }

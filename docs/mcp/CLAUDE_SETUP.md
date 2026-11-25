@@ -50,7 +50,19 @@ A URL **não** é um endpoint de API com chave: não existe API key nem token co
 
 ## Claude Web (interface web)
 
-A interoperabilidade com o conector web do Claude depende do suporte do produto a DCR, PKCE S256, resource indicators e ao formato de metadata usado aqui. **Não foi testada** nesta implementação e deve ser considerada pendente até validação explícita com uma conta real.
+1. Abra `https://claude.ai/customize/connectors` e clique em **Add custom connector**.
+2. Informe o nome `RPG Campaign Studio` e a URL do servidor.
+3. Em **Authentication**, escolha **Sign in now** ou **Sign in when needed**.
+4. Em **OAuth client**, prefira **Register automatically**. Se o diálogo exigir um Client ID, use o valor cadastrado no servidor (exibido nas páginas do produto quando `MCP_CLAUDE_CLIENT_ID` está configurado) e deixe o client secret em branco.
+5. Clique em **Add** → **Connect**, faça login no RPG Studio e selecione explicitamente as campanhas no consentimento.
+
+Não escolha **Use Claude's published identity**: o servidor não anuncia CIMD (`client_id_metadata_document_supported`). No plano Free, Claude permite apenas um conector customizado.
+
+> **Estado da validação:** a interoperabilidade com Claude Web **não foi testada** com conta real. O cliente OAuth público para o callback `https://claude.ai/api/mcp/auth_callback` foi criado via DCR, mas a conclusão do fluxo no produto continua pendente.
+
+## Guia dentro da aplicação
+
+Os usuários encontram o atalho **Conexões MCP** no cabeçalho da página inicial (quando `MCP_ENABLED=true`). A página `/mcp` mostra a URL do servidor, o Client ID opcional, as conexões ativas/revogadas e o botão de revogação; o link **Ver passo a passo** abre `/help/mcp`, página pública com as instruções para Claude Web, Desktop e Code. A metadata OAuth aponta `service_documentation`/`resource_documentation` para `/help/mcp`.
 
 ## Solução de problemas
 

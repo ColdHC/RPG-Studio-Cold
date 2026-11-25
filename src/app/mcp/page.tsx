@@ -1,7 +1,8 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { isMcpEnabled, MCP_SCOPE_LABELS, type McpScope } from '@/lib/mcp/config';
+import { getMcpConfig, isMcpEnabled, MCP_SCOPE_LABELS, type McpScope } from '@/lib/mcp/config';
 import { listConnections, revokeConnection } from '@/services/mcpAuthService';
 import styles from './page.module.css';
 
@@ -32,6 +33,13 @@ export default async function McpConnectionsPage() {
   const connections = await listConnections(user.id);
   const active = connections.filter((connection) => !connection.revokedAt);
   const revoked = connections.filter((connection) => connection.revokedAt);
+  let serverUrl = '/api/mcp';
+  try {
+    serverUrl = getMcpConfig().resource;
+  } catch {
+    // Configuração inválida já falha fechado nas rotas MCP; a página ainda pode orientar o usuário.
+  }
+  const clientId = process.env.MCP_CLAUDE_CLIENT_ID?.trim() || '';
 
   return (
     <main className={styles.page}>
@@ -42,6 +50,27 @@ export default async function McpConnectionsPage() {
           Estes clientes têm acesso <strong>somente de leitura</strong> às campanhas listadas. Revogar uma conexão
           invalida imediatamente todos os tokens emitidos para ela.
         </p>
+
+        <div className={styles.connect}>
+          <h2>Como conectar</h2>
+          <p className={styles.subtitle}>
+            Use a URL abaixo como servidor remoto no Claude. A autenticação é OAuth com PKCE e o acesso é
+            <strong> somente leitura</strong> às campanhas que você selecionar no consentimento.
+          </p>
+          <div className={styles.copyField}>
+            <span>URL do servidor</span>
+            <code>{serverUrl}</code>
+          </div>
+          {clientId && (
+            <div className={styles.copyField}>
+              <span>Client ID (se o Claude pedir)</span>
+              <code>{clientId}</code>
+            </div>
+          )}
+          <Link href={'/help/mcp' as never} className={styles.helpLink}>
+            Ver passo a passo para Claude Web, Desktop e Code
+          </Link>
+        </div>
 
         <h2>Autorizações ativas</h2>
         {active.length === 0 ? (
@@ -87,8 +116,7 @@ export default async function McpConnectionsPage() {
         )}
 
         <p className={styles.hint}>
-          Para conectar um novo cliente, use a URL <code>/api/mcp</code> com OAuth 2.1 e PKCE. Consulte a documentação em{' '}
-          <code>docs/mcp/</code>.
+          Precisa de ajuda? <Link href={'/help/mcp' as never} className={styles.inlineLink}>guia de conexão</Link>.
         </p>
       </section>
     </main>

@@ -9,6 +9,7 @@ Todas as variáveis são opcionais exceto `MCP_PUBLIC_BASE_URL` em produção. V
 | `MCP_ENABLED` | `false` | `true` habilita; qualquer outro valor desabilita. |
 | `MCP_PUBLIC_BASE_URL` | — | Obrigatório em produção. Origem HTTPS sem path/query/fragmento/credenciais. HTTP permitido só em loopback. |
 | `MCP_ALLOWED_ORIGINS` | vazio | CSV de origens browser adicionais autorizadas a chamar `/api/mcp`. |
+| `MCP_CLAUDE_CLIENT_ID` | vazio | Client ID público opcional exibido nas páginas `/mcp` e `/help/mcp` para clientes que não usam DCR. Não é segredo e não altera a validação do servidor. |
 | `MCP_ACCESS_TOKEN_TTL_SECONDS` | `900` | 60–3600. |
 | `MCP_REFRESH_TOKEN_TTL_DAYS` | `30` | 1–30 (nunca acima de 30 dias). |
 | `MCP_AUTH_CODE_TTL_SECONDS` | `300` | 60–600. |
@@ -33,6 +34,7 @@ A origem canônica é sempre `MCP_PUBLIC_BASE_URL`:
 - token: `<origin>/api/oauth/token`
 - registro: `<origin>/api/oauth/register`
 - revogação: `<origin>/api/oauth/revoke`
+- ajuda ao usuário: `<origin>/help/mcp` (também referenciada como `resource_documentation` e `service_documentation`)
 
 ## Banco de dados
 

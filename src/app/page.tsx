@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
+import { isMcpEnabled } from '@/lib/mcp/config';
 import { campaignService } from '@/services/campaignService';
 import { SessionControls } from '@/components/SessionControls';
 import { SYSTEM_LABELS } from '@/types';
@@ -29,7 +30,7 @@ export default async function HomePage() {
           </p>
         </div>
         <div className={styles.actions}>
-          <SessionControls userName={user.name} />
+          <SessionControls userName={user.name} showMcp={isMcpEnabled()} />
           <Link href="/campaigns/new" className={styles.newButton}>
           <Plus size={16} />
             Nova campanha
