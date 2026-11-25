@@ -11,6 +11,7 @@
 7. [`DEPLOYMENT.md`](DEPLOYMENT.md) — Vercel, Neon e operação.
 8. [`PERFORMANCE.md`](PERFORMANCE.md) — otimizações comprovadas e instrumentação.
 9. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md), [`DECISIONS.md`](DECISIONS.md) e [`ROADMAP.md`](ROADMAP.md).
-10. [`UPSTREAM.md`](UPSTREAM.md) e [`../CONTRIBUTION_PLAN.md`](../CONTRIBUTION_PLAN.md) — manutenção da fork e contribuições.
+10. [`mcp/README.md`](mcp/README.md) — servidor MCP remoto somente leitura (índice com arquitetura, autenticação, segurança, ferramentas, configuração, setup de cliente, testes, performance e limitações).
+11. [`UPSTREAM.md`](UPSTREAM.md) e [`../CONTRIBUTION_PLAN.md`](../CONTRIBUTION_PLAN.md) — manutenção da fork e contribuições.
 
 Os documentos descrevem o checkout atual. Itens inferidos a partir do código estão marcados como inferência; decisões históricas são referenciadas por commit quando possível.

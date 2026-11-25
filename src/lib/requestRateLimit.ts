@@ -167,11 +167,17 @@ export class DistinctIpPerEmailLimiter {
   }
 }
 
-export function getClientIp(request: Request) {
+type HeaderSource = { get(name: string): string | null };
+
+export function getClientIpFromHeaders(headers: HeaderSource) {
   if (process.env.TRUST_PROXY_HEADERS !== 'true') return 'direct-connection';
-  const forwarded = request.headers.get('x-forwarded-for');
+  const forwarded = headers.get('x-forwarded-for');
   if (forwarded) return forwarded.split(',')[0]?.trim() || 'unknown';
-  return request.headers.get('x-real-ip')?.trim() || 'unknown';
+  return headers.get('x-real-ip')?.trim() || 'unknown';
+}
+
+export function getClientIp(request: Request) {
+  return getClientIpFromHeaders(request.headers);
 }
 
 function normalizeEmail(email?: string) {

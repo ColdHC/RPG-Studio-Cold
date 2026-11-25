@@ -1,0 +1,119 @@
+.page {
+  min-height: 100vh;
+  padding: 48px 20px;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 760px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 32px;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 12px;
+}
+
+.card h1 {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 3vw, 30px);
+  margin: 0 0 12px;
+}
+
+.card h2 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin: 28px 0 12px;
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text-faint);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.item {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--color-surface-elevated);
+}
+
+.revokedItem {
+  opacity: 0.65;
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.meta {
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.revoke {
+  margin-top: 10px;
+  border: 1px solid rgba(222, 125, 120, 0.5);
+  background: rgba(222, 125, 120, 0.08);
+  color: var(--color-danger);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.revoke:hover {
+  background: rgba(222, 125, 120, 0.16);
+}
+
+.hint {
+  margin: 28px 0 0;
+  font-size: 12px;
+  color: var(--color-text-faint);
+  line-height: 1.6;
+}
+
+.hint code {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: 24px 18px;
+  }
+}

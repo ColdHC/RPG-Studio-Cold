@@ -14,17 +14,25 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 - Telemetria opt-in de rotas, operações server-side e consultas Prisma.
 - Exploração de arquivos com dados iniciais server-rendered.
 - Índices compostos para listagens de arquivos.
+- Servidor MCP remoto somente leitura em `/api/mcp`, com OAuth 2.1 + PKCE S256, DCR, metadata de recurso protegido e AS, tokens opacos com rotação de refresh e revogação.
+- Tela de consentimento `/oauth/authorize` com seleção explícita de campanhas e página `/mcp` para revisar/revogar conexões.
+- 13 ferramentas MCP de leitura, com escopos dedicados, visibilidade de jogador/Mestre e limites de resposta.
+- Rate limiter distribuído em PostgreSQL para chamadas de ferramentas, buscas e rotas OAuth.
+- Documentação em `docs/mcp/` (arquitetura, autenticação, segurança, ferramentas, configuração, setup de cliente, relatório de testes, performance e limitações).
 
 ### Changed
 
 - Compilador V6 passou a iniciar recolhido no dashboard, carregar o diagnóstico sob demanda e persistir a preferência por usuário/campanha.
 - Shell da campanha e listas de arquivos passaram a aceitar carregamento inicial e consultas compatíveis paralelas.
 - Páginas e componentes receberam contenção responsiva.
+- `getCampaignAccess` e `getViewerContext` passaram a delegar para variantes que recebem o usuário explicitamente, permitindo reutilização segura fora do cookie de sessão.
+- `AuthForm` passou a respeitar o parâmetro `next` ao retornar do login para o consentimento MCP.
 
 ### Fixed
 
 - Contenção do editor de documentos, controles compartilhados e grids em larguras menores.
 - Temas de campanha agora mantêm configurações independentes para os modos claro e escuro, incluindo compatibilidade com temas legados.
+- Correções da revisão de segurança MCP: limite de requisições antes da autenticação e antes da consulta de sessão no consentimento, escopos do DCR persistidos e respeitados (incluindo default quando `scope` é omitido), `grant_types` aplicado ao refresh, filtro de campanhas arquivadas no servidor, alfabeto PKCE conforme RFC 7636, normalização de `Origin`, limite de coleções em `get_session` e auditoria de erro com `campaignId`.
 
 ### Improved
 
@@ -34,12 +42,18 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 ### Security
 
 - Imagens de tema permanecem limitadas por schema, tipo MIME e tamanho no endpoint.
+- MCP desabilitado por padrão; configuração inválida falha fechado, `issuer` não é derivado de `Host` em produção e tokens/códigos são armazenados apenas como hash.
+- Isolamento MCP por concessão explícita de campanha e associação atual do usuário, com erros `404` para recursos fora da concessão.
+- PKCE S256 obrigatório, redirect URI exata, resource indicator validado, refresh tokens com rotação e detecção de reuso.
+- Consentimento protegido por cookie SameSite e checagem de origem; limites de corpo/resposta, paginação e rate limits distribuídos.
+- `TRUST_PROXY_HEADERS=true` obrigatório em produção quando MCP está habilitado, para não compartilhar o limite por IP entre todos os chamadores.
 
 ### Database Changes
 
 - `20261124150000_campaign_themes`: `CampaignTheme`, `ThemePreset` e tema ativo.
 - `20261124100000_add_3det_victory`: enum aditivo `SystemType.THREEDET_VICTORY`.
 - `20261124170000_add_campaign_file_list_indexes`: índices compostos de `CampaignFile`.
+- `20261125120000_mcp_oauth_server`: tabelas aditivas `McpOAuthClient`, `McpAuthorizationCode`, `McpConnection`, `McpCampaignGrant`, `McpAccessToken`, `McpRefreshToken` e `McpRateLimit`.
 
 ### Deprecated / Removed
 

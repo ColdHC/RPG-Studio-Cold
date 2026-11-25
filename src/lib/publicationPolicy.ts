@@ -1,5 +1,6 @@
 import { Prisma, type CampaignMemberAudience } from '@prisma/client';
-import { AccessDeniedError, getCampaignAccess } from '@/lib/access';
+import { AccessDeniedError, getCampaignAccess, getCampaignAccessForUser } from '@/lib/access';
+import { requireUser, type PublicUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export type ViewerContext =
@@ -90,8 +91,8 @@ export function searchableFileWhere(userId: string): Prisma.CampaignFileWhereInp
   };
 }
 
-export async function getViewerContext(campaignId: string, options: { requirePlayerMode?: boolean } = {}): Promise<ViewerContext> {
-  const access = await getCampaignAccess(campaignId);
+export async function getViewerContextForUser(user: PublicUser, campaignId: string, options: { requirePlayerMode?: boolean } = {}): Promise<ViewerContext> {
+  const access = await getCampaignAccessForUser(user, campaignId);
   if (access.role === 'OWNER') return { kind: 'OWNER', campaignId, userId: access.user.id };
 
   const [member, config] = await Promise.all([
@@ -106,6 +107,10 @@ export async function getViewerContext(campaignId: string, options: { requirePla
   if (access.campaign.isArchived) throw new AccessDeniedError('Acesso não autorizado.', 404);
   if (options.requirePlayerMode && !config?.isEnabled) throw new AccessDeniedError('Modo Jogador indisponível.', 404);
   return { kind: 'PLAYER', campaignId, userId: access.user.id, audience: member.audience };
+}
+
+export async function getViewerContext(campaignId: string, options: { requirePlayerMode?: boolean } = {}): Promise<ViewerContext> {
+  return getViewerContextForUser(await requireUser(), campaignId, options);
 }
 
 export async function getPublicViewerContext(campaignId: string): Promise<Extract<ViewerContext, { kind: 'PUBLIC' }>> {
