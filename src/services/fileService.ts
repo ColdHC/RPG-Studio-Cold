@@ -46,7 +46,7 @@ const fileListTagSelect = {
   tag: { select: { id: true, campaignId: true, name: true, color: true, icon: true, description: true } }
 } as const;
 
-function fileListSelect(options: Pick<ListFilesParams, 'includeContent' | 'includeData'> = {}) {
+function fileListSelect(options: Pick<ListFilesParams, 'includeContent' | 'includeData'> = {}, viewer?: ViewerContext) {
   return {
     id: true,
     campaignId: true,
@@ -62,8 +62,53 @@ function fileListSelect(options: Pick<ListFilesParams, 'includeContent' | 'inclu
     trashedAt: true,
     createdAt: true,
     updatedAt: true,
-    tags: { select: fileListTagSelect }
+    tags: { select: fileListTagSelect },
+    mediaReferences: {
+      where: {
+        purpose: { in: ['PRIMARY', 'COVER'] },
+        ...(viewer?.kind === 'OWNER' ? {} : { asset: { visibility: 'PUBLISHED' } })
+      },
+      orderBy: { position: 'asc' },
+      take: 2,
+      select: {
+        id: true, fileId: true, purpose: true, position: true, caption: true,
+        asset: { select: { id: true, displayName: true, altText: true, description: true, width: true, height: true } }
+      }
+    }
   } satisfies Prisma.CampaignFileSelect;
+}
+
+function sanitizePlayerMapData(data: Prisma.JsonValue): Prisma.JsonValue {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
+  const dataRecord = data as Prisma.JsonObject;
+  const map = dataRecord.map;
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return data;
+
+  const mapRecord = map as Prisma.JsonObject;
+  const layers = Array.isArray(mapRecord.layers) ? mapRecord.layers.filter((layer) => {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return false;
+    return (layer as Prisma.JsonObject).access !== 'PRIVATE';
+  }) : [];
+  const visibleLayerIds = new Set(layers.map((layer) => (layer as Prisma.JsonObject).id).filter((id): id is string => typeof id === 'string'));
+  const markers = Array.isArray(mapRecord.markers) ? mapRecord.markers.filter((marker) => {
+    if (!marker || typeof marker !== 'object' || Array.isArray(marker)) return false;
+    const markerRecord = marker as Prisma.JsonObject;
+    const layerId = markerRecord.layerId;
+    return markerRecord.visibility === 'PUBLISHED' && (typeof layerId !== 'string' || visibleLayerIds.size === 0 || visibleLayerIds.has(layerId));
+  }) : [];
+  const geometries = Array.isArray(mapRecord.geometries) ? mapRecord.geometries.filter((geometry) => {
+    if (!geometry || typeof geometry !== 'object' || Array.isArray(geometry)) return false;
+    const geometryRecord = geometry as Prisma.JsonObject;
+    const layerId = geometryRecord.layerId;
+    return geometryRecord.visibility === 'PUBLISHED' && (typeof layerId !== 'string' || visibleLayerIds.size === 0 || visibleLayerIds.has(layerId));
+  }) : [];
+
+  return { ...dataRecord, map: { ...mapRecord, layers, markers, geometries } };
+}
+
+function sanitizePlayerFile<T extends { type: FileType; data: Prisma.JsonValue }>(file: T): T {
+  if (file.type !== 'MAP') return file;
+  return { ...file, data: sanitizePlayerMapData(file.data) };
 }
 
 async function getOrCreateDefaultFavoriteFolderId(campaignId: string): Promise<string> {
@@ -99,7 +144,7 @@ export const fileService = {
     viewer: providedViewer
   }: ListFilesParams) {
     const viewer = providedViewer ?? await getViewerContext(campaignId, { requirePlayerMode: true });
-    return prisma.campaignFile.findMany({
+    const files = await prisma.campaignFile.findMany({
       where: {
         AND: [
           publishedFileWhere(viewer),
@@ -120,11 +165,19 @@ export const fileService = {
           }
         ]
       },
-      select: fileListSelect({ includeContent, includeData }),
+      select: fileListSelect({ includeContent, includeData }, viewer),
       orderBy: { [sort]: direction },
       ...(take === undefined ? {} : { take }),
       ...(skip === undefined ? {} : { skip })
     });
+
+    if (viewer.kind !== 'OWNER' && includeData) {
+      return files.map((file) => file.type === 'MAP' && 'data' in file && file.data !== undefined
+        ? { ...file, data: sanitizePlayerMapData(file.data) }
+        : file
+      );
+    }
+    return files;
   },
 
   async listPage(params: ListFilesParams & { page: number; pageSize: number }) {
@@ -147,10 +200,11 @@ export const fileService = {
     if (!identity) return null;
     const viewer = await getViewerContext(identity.campaignId, { requirePlayerMode: true });
     if (viewer.kind !== 'OWNER') {
-      return prisma.campaignFile.findFirst({
+      const file = await prisma.campaignFile.findFirst({
         where: { id, ...publishedFileWhere(viewer) },
         select: publicationSelect.file
       });
+      return file ? sanitizePlayerFile(file) : null;
     }
     return prisma.campaignFile.findUnique({
       where: { id },
@@ -171,6 +225,13 @@ export const fileService = {
         updatedAt: true,
         tags: { select: { tag: { select: { id: true, campaignId: true, name: true, color: true, icon: true, description: true } } } },
         attachments: { select: { id: true, fileId: true, url: true, label: true, mimeType: true, createdAt: true } },
+        mediaReferences: {
+          orderBy: { position: 'asc' },
+          select: {
+            id: true, fileId: true, purpose: true, position: true, caption: true,
+            asset: { select: { id: true, displayName: true, altText: true, description: true, width: true, height: true } }
+          }
+        },
         comments: { orderBy: { createdAt: 'desc' }, select: { id: true, fileId: true, authorId: true, body: true, createdAt: true } },
         history: { orderBy: { createdAt: 'desc' }, select: { id: true, fileId: true, action: true, summary: true, authorId: true, createdAt: true } },
         relationshipsFrom: {
@@ -387,8 +448,8 @@ export const fileService = {
     return comment;
   },
 
-  // Attachments support external URLs and small image uploads. The upload route
-  // validates MIME and size before storing the image as a data URL attachment.
+  // Attachments keep external links for backwards compatibility. Local image
+  // uploads are stored by mediaService and this record only keeps its app URL.
   async addAttachment(fileId: string, input: { url: string; label?: string; mimeType?: string }, authorId?: string) {
     const file = await assertFileAccess(fileId, { write: true });
     const attachment = await prisma.attachment.create({ data: { fileId, ...input } });

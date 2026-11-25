@@ -15,6 +15,8 @@
 
 Uploads de tema são limitados a PNG/JPEG/GIF/WebP e 600 KB. A configuração aceita caminhos internos ou data URLs de imagem permitidas. Isso reduz superfície de script, mas data URLs aumentam payload e não são storage de produção.
 
+Os uploads da biblioteca de mídia validam magic bytes e dimensões no servidor, aceitam apenas PNG/JPEG/GIF/WebP, rejeitam SVG e armazenam bytes em Blob privado. A rota de leitura valida sessão, campanha, `MediaAsset.visibility` e a publicação/grant do arquivo referenciador; portanto uma URL de entrega não equivale a acesso público.
+
 ## Riscos e limitações
 
 - Rate limiting em memória não é suficiente para múltiplas réplicas; use armazenamento compartilhado antes de escalar.

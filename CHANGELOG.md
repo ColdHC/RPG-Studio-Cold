@@ -6,6 +6,9 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 
 ### Added
 
+- Biblioteca de mídia por campanha com assets reutilizáveis, referências, upload validado e Blob privado.
+- Seletor universal de mídia, lightbox com zoom/teclado e galerias de documento.
+- Visualizador de mapas com zoom, pan, fullscreen, camadas com acesso, marcadores arrastáveis e geometrias básicas em coordenadas relativas.
 - Grafo de Relações administrativo com filtros, auto-layout, posições locais, navegação, edição e exclusão usando o serviço oficial de relacionamentos.
 - Relatório técnico `docs/RELATIONSHIP_GRAPH_AND_COMPILER_V6.md`.
 - Temas por campanha com rascunho, publicação, aplicação, presets e validação.
@@ -34,12 +37,14 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 ### Security
 
 - Imagens de tema permanecem limitadas por schema, tipo MIME e tamanho no endpoint.
+- Mídia nova valida assinatura/dimensões, rejeita SVG, usa entrega autenticada e não grava Base64 no PostgreSQL.
 
 ### Database Changes
 
 - `20261124150000_campaign_themes`: `CampaignTheme`, `ThemePreset` e tema ativo.
 - `20261124100000_add_3det_victory`: enum aditivo `SystemType.THREEDET_VICTORY`.
 - `20261124170000_add_campaign_file_list_indexes`: índices compostos de `CampaignFile`.
+- `20261124190000_media_assets`: `MediaAsset`, `MediaReference` e enum de visibilidade.
 
 ### Deprecated / Removed
 

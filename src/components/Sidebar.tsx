@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Mail,
   Radio,
+  Images,
   Menu,
   X
 } from 'lucide-react';
@@ -42,6 +43,7 @@ import type { CampaignRole } from '@/lib/access';
 
 const NAV_ITEMS = [
   { href: '/arquivos', label: 'Todos os arquivos', icon: FolderOpen },
+  { href: '/midia', label: 'Biblioteca de mídia', icon: Images },
   { href: '/personagens', label: 'Personagens', icon: Users },
   { href: '/npcs', label: 'NPCs', icon: UserCog },
   { href: '/ameacas', label: 'Ameaças', icon: Skull },

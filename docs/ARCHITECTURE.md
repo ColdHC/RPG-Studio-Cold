@@ -53,6 +53,6 @@ Não há store global de domínio: páginas server-side e componentes React gere
 ## Limitações arquiteturais
 
 - O rate limiting em memória não coordena múltiplas réplicas.
-- Uploads de anexos e temas são data URLs; não substituem object storage para arquivos grandes.
+- Anexos legados e temas ainda usam data URLs; novos assets da biblioteca usam Blob privado por `mediaStorage`.
 - A telemetria é opt-in e baseada em logs, não em métricas persistentes.
 - A configuração de Vercel/Neon não está versionada no repositório.

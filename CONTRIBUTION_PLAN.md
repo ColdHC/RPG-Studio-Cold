@@ -20,6 +20,7 @@
 | `perf/rpg-studio-data-loading` | performance | consultas, lazy loading, índices e telemetria | `feat/document-editor` | validate, format, types, lint, tests e build passaram | pronta após editor | alta | não verificável enquanto local |
 | `perf/file-explorer-server-render` | performance | dados iniciais server-rendered dos exploradores | `perf/rpg-studio-data-loading` | validate, format, types, lint, tests e build passaram | pronta após performance | média | não verificável enquanto local |
 | `fix/responsive-layout` | fix | shell, grids, editor e controles responsivos | `perf/file-explorer-server-render` | não executada após interrupção da matriz; build pendente | aguarda validação | média | não verificável enquanto local |
+| `feat/media-library-maps` | feature | biblioteca privada de imagens, referências e visualização de mapas | `fix/responsive-layout` | requer migration isolada, fluxo Blob autenticado e navegador | em implementação local | média | não verificável enquanto local |
 
 As branches foram reconstruídas com patches finais limpos. O preset e a identidade de O Sangue de Arashi não aparecem nelas. A branch principal da fork preserva todas as personalizações existentes.
 

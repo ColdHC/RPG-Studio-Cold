@@ -10,7 +10,8 @@
 6. [`DEVELOPMENT.md`](DEVELOPMENT.md) e [`TESTING.md`](TESTING.md) — desenvolvimento e validação.
 7. [`DEPLOYMENT.md`](DEPLOYMENT.md) — Vercel, Neon e operação.
 8. [`PERFORMANCE.md`](PERFORMANCE.md) — otimizações comprovadas e instrumentação.
-9. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md), [`DECISIONS.md`](DECISIONS.md) e [`ROADMAP.md`](ROADMAP.md).
-10. [`UPSTREAM.md`](UPSTREAM.md) e [`../CONTRIBUTION_PLAN.md`](../CONTRIBUTION_PLAN.md) — manutenção da fork e contribuições.
+9. [`MEDIA.md`](MEDIA.md), [`MAPS.md`](MAPS.md) e [`DOCUMENT_EDITOR.md`](DOCUMENT_EDITOR.md) — mídia, mapas e documentos visuais.
+10. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md), [`DECISIONS.md`](DECISIONS.md) e [`ROADMAP.md`](ROADMAP.md).
+11. [`UPSTREAM.md`](UPSTREAM.md) e [`../CONTRIBUTION_PLAN.md`](../CONTRIBUTION_PLAN.md) — manutenção da fork e contribuições.
 
 Os documentos descrevem o checkout atual. Itens inferidos a partir do código estão marcados como inferência; decisões históricas são referenciadas por commit quando possível.

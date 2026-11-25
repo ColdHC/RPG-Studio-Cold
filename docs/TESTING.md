@@ -14,6 +14,8 @@
 
 Há testes puros para acesso, autenticação, erros de API, temas, 3DeT, Markdown, regras de combate, transferência, relações, publicação e serviços. Há scripts de integração PostgreSQL para round-trip, integridade relacional, quadro, hipóteses, sessões e briefing. Não foi encontrado setup Playwright/Cypress versionado neste checkout; testes de browser não são declarados como automatizados.
 
+`src/lib/media.test.ts` cobre assinatura de arquivo, dimensões PNG e saneamento de nome; `src/lib/markdown.test.ts` cobre a URL interna de entrega de mídia. Ainda é necessário validar manualmente Blob privado, upload real, isolamento entre campanhas, leitura por jogador, mapa com toque e diferentes viewports.
+
 ## Limites
 
 Smoke e integração de banco exigem ambiente e credenciais apropriados. O build não prova autorização de cada rota. Testes unitários não provam latência de Neon, uploads reais, múltiplas réplicas ou comportamento visual em dispositivos.

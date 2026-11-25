@@ -21,3 +21,5 @@ Os logs não são benchmark: são evidência operacional de uma execução espec
 ## Gargalos restantes
 
 Cold starts, latência Vercel-Neon, data URLs e payloads JSON grandes não têm métrica persistente no projeto. O rate limit em memória e a ausência de cache compartilhado continuam limitações operacionais.
+
+A biblioteca de mídia pagina no backend e cards/galerias usam lazy loading; o visualizador de mapas só carrega a imagem e os marcadores do mapa aberto. Não houve benchmark reproduzível de Blob, LCP de imagens ou mapas grandes, portanto nenhum ganho de performance é declarado.

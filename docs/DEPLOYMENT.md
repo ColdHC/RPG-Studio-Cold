@@ -13,8 +13,12 @@ Use `.env.example` como contrato:
 - `TRUST_PROXY_HEADERS`: habilita confiança explícita em headers de proxy.
 - `PERFORMANCE_LOGS`, `PERFORMANCE_SLOW_QUERY_MS`: telemetria server-side opt-in.
 - `NEXT_PUBLIC_PERFORMANCE_LOGS`: reservado no exemplo; não substitui `PERFORMANCE_LOGS` no código atual.
+- `BLOB_READ_WRITE_TOKEN`: acesso a um Vercel Blob Store **privado** para a biblioteca de mídia.
+- `MEDIA_MAX_IMAGE_BYTES`, `MEDIA_MAX_UPLOAD_FILES`, `MEDIA_MAX_IMAGE_PIXELS`: limites opcionais de upload.
 
 Nunca publique valores, tokens ou `.env.local`.
+
+Antes de habilitar upload de mídia, crie/conecte o store privado ao projeto e configure sua credencial/runtime. Sem esse passo, a aplicação continua disponível e responde 503 somente ao upload; não use um bucket público como substituto, pois a entrega depende da guard da aplicação.
 
 ## Processo seguro
 

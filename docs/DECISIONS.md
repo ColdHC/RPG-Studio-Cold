@@ -36,3 +36,9 @@
 - **Status:** implementado.
 - **Decisão:** cada `CampaignTheme` mantém variantes `modes.dark` e `modes.light`; identidade, tipografia e componentes permanecem compartilhados.
 - **Consequência:** o alternador global aplica a variante correspondente sem alterar rascunhos ou publicação; configurações JSON v1 são migradas na leitura.
+
+## ADR-007 — Mídia privada e referências normalizadas
+
+- **Status:** implementado na migration `20261124190000_media_assets`.
+- **Decisão:** bytes de imagem ficam em Vercel Blob privado; `MediaAsset` mantém metadados por campanha e `MediaReference` vincula a arquivos por finalidade.
+- **Consequência:** não há novos payloads Base64 ou URL pública de objeto; cada leitura passa por autorização e a publicação exige mídia e arquivo publicados.

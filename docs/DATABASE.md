@@ -26,7 +26,7 @@ erDiagram
 
 ## Domínios do schema
 
-Identidade: `User`, `AuthSession`, `CampaignMember`, `CampaignInvite`. Campanha e conteúdo: `Campaign`, `CampaignFile`, `Attachment`, `Comment`, `FileHistoryEntry`, `Tag`, `FileTag`, `FavoriteFolder`, `FavoriteEntry`. Sistemas: `CampaignAttribute`, `CampaignSkill`, `CampaignClass`, `CampaignRace`. Investigação: `RelationshipType`, `Relationship`, `InvestigationHypothesis`, `HypothesisEvidence`, `SessionHypothesis`, `BoardNode`, `BoardEdge`, `InvestigationBoardPin`, `InvestigationBoardGroup`, `InvestigationBoardView`, `SessionBoardView`. Operação: `Session`, `SessionFile`, `TimelineEvent`, `CampaignBriefing`, `CombatEncounter`, `CombatParticipant`. Publicação e auditoria: `PlayerModeConfig`, `PlayerVisibility`, `CampaignFileGrant`, `AuditEvent`. Aparência: `CampaignTheme`, `ThemePreset`.
+Identidade: `User`, `AuthSession`, `CampaignMember`, `CampaignInvite`. Campanha e conteúdo: `Campaign`, `CampaignFile`, `Attachment`, `Comment`, `FileHistoryEntry`, `Tag`, `FileTag`, `FavoriteFolder`, `FavoriteEntry`. Sistemas: `CampaignAttribute`, `CampaignSkill`, `CampaignClass`, `CampaignRace`. Investigação: `RelationshipType`, `Relationship`, `InvestigationHypothesis`, `HypothesisEvidence`, `SessionHypothesis`, `BoardNode`, `BoardEdge`, `InvestigationBoardPin`, `InvestigationBoardGroup`, `InvestigationBoardView`, `SessionBoardView`. Operação: `Session`, `SessionFile`, `TimelineEvent`, `CampaignBriefing`, `CombatEncounter`, `CombatParticipant`. Publicação e auditoria: `PlayerModeConfig`, `PlayerVisibility`, `CampaignFileGrant`, `AuditEvent`. Aparência: `CampaignTheme`, `ThemePreset`. Mídia: `MediaAsset` armazena metadados por campanha e `MediaReference` permite reutilização por arquivo sem duplicar o objeto.
 
 `CampaignFile` é o modelo polimórfico principal: `type` define a categoria e `data` guarda payload específico em JSON. Relacionamentos oficiais usam `Relationship`; conexões do quadro são visuais e não substituem o grafo oficial.
 
@@ -37,6 +37,7 @@ Identidade: `User`, `AuthSession`, `CampaignMember`, `CampaignInvite`. Campanha 
 | `20261124150000_campaign_themes` | temas, presets, tema ativo e índices/foreign keys | aditiva |
 | `20261124100000_add_3det_victory` | enum `THREEDET_VICTORY` | aditiva |
 | `20261124170000_add_campaign_file_list_indexes` | dois índices compostos de `CampaignFile` | aditiva |
+| `20261124190000_media_assets` | assets de mídia, referências, visibilidade e índices de biblioteca | aditiva |
 
 Migrations anteriores permanecem na ordem do diretório. Execute `npx prisma migrate deploy` somente com a base correta e autorizada. Não há backup automatizado implementado no código; backup e restore são responsabilidades da infraestrutura PostgreSQL/Neon.
 
