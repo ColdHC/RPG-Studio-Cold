@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlignCenter, AlignLeft, AlignRight, Bold, Code2, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Minus, Quote, Redo2, Sparkles, Strikethrough, Trash2, Undo2 } from 'lucide-react';
 import { mediaApi } from '@/lib/api';
+import { supportedImageFiles } from '@/lib/mediaInput';
 import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown';
 import type { MediaAsset } from '@/types';
 import { MediaPicker } from './MediaPicker';
@@ -117,8 +118,11 @@ export function DocumentEditor({ content, onChange, mode, campaignId, fileId, en
 
   async function uploadInlineImages(files: File[], range?: Range) {
     if (!campaignId || !fileId) return;
-    const images = files.filter((file) => file.type.startsWith('image/'));
-    if (!images.length) return;
+    const images = supportedImageFiles(files);
+    if (!images.length) {
+      setMediaError('Use imagens PNG, JPEG, GIF ou WebP.');
+      return;
+    }
     setUploadingMedia(true);
     setMediaError(null);
     try {
@@ -244,7 +248,7 @@ export function DocumentEditor({ content, onChange, mode, campaignId, fileId, en
         <div className={styles.imageInspectorActions}><span>Alinhamento</span><button type="button" className={imageInspector.align === 'left' ? styles.imageInspectorActionActive : ''} onClick={() => updateInspectedImage({ align: 'left' })} aria-label="Alinhar imagem à esquerda"><AlignLeft size={15} /></button><button type="button" className={imageInspector.align === 'center' ? styles.imageInspectorActionActive : ''} onClick={() => updateInspectedImage({ align: 'center' })} aria-label="Centralizar imagem"><AlignCenter size={15} /></button><button type="button" className={imageInspector.align === 'right' ? styles.imageInspectorActionActive : ''} onClick={() => updateInspectedImage({ align: 'right' })} aria-label="Alinhar imagem à direita"><AlignRight size={15} /></button><button type="button" className={styles.imageRemove} onClick={removeInspectedImage}><Trash2 size={14} />Remover</button></div>
       </div>}
       {mediaError && <p className={styles.mediaError} role="alert">{mediaError}</p>}
-      <div ref={visualRef} className={styles.visualInput} contentEditable suppressContentEditableWarning onInput={emitVisualChange} onClick={(event) => { if (event.target instanceof HTMLImageElement) inspectImage(event.target); }} onPaste={(event) => { const files = Array.from(event.clipboardData.files); if (files.some((file) => file.type.startsWith('image/')) && campaignId && fileId) { event.preventDefault(); void uploadInlineImages(files, selectionRange()); } }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { const files = Array.from(event.dataTransfer.files); if (files.some((file) => file.type.startsWith('image/')) && campaignId && fileId) { event.preventDefault(); void uploadInlineImages(files, selectionRange()); } }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') event.preventDefault(); }} aria-label="Editor visual do documento" role="textbox" />
+      <div ref={visualRef} className={styles.visualInput} contentEditable suppressContentEditableWarning onInput={emitVisualChange} onClick={(event) => { if (event.target instanceof HTMLImageElement) inspectImage(event.target); }} onPaste={(event) => { const files = Array.from(event.clipboardData.files); if (supportedImageFiles(files).length && campaignId && fileId) { event.preventDefault(); void uploadInlineImages(files, selectionRange()); } }} onDragEnter={(event) => { event.preventDefault(); event.stopPropagation(); }} onDragOver={(event) => { event.preventDefault(); event.stopPropagation(); }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); if (campaignId && fileId) void uploadInlineImages(Array.from(event.dataTransfer.files), selectionRange()); }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') event.preventDefault(); }} aria-label="Editor visual do documento" role="textbox" />
       {slashQuery !== '' && (
         <div className={styles.commandMenu} role="menu" aria-label="Comandos do editor">
           {slashCommands.filter((command) => command.key.includes(slashQuery.toLowerCase())).map((command) => { const Icon = command.icon; return <button type="button" role="menuitem" key={command.key} onMouseDown={(event) => event.preventDefault()} onClick={() => executeSlashCommand(command.key)}><Icon size={15} /><span><strong>/{command.key}</strong><small>{command.label}</small></span></button>; })}
