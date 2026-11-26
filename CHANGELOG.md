@@ -9,6 +9,8 @@ Registro de alterações verificadas no histórico Git local. Não representa re
 - Biblioteca de mídia por campanha com assets reutilizáveis, referências, upload validado e Blob privado.
 - Seletor universal de mídia, lightbox com zoom/teclado e galerias de documento.
 - Visualizador de mapas com zoom, pan, fullscreen, camadas com acesso, marcadores arrastáveis e geometrias básicas em coordenadas relativas.
+- Editor visual com upload por colagem/arrastar, legenda, largura e alinhamento seguro de imagens; mapas agora aceitam imagem de marcador, preview de vínculos e edição de vértices.
+- Mídia gera thumbnails WebP privadas para biblioteca, seletor, cartões, galerias, marcadores e avatares do grafo, sem substituir os originais.
 - Grafo de Relações administrativo com filtros, auto-layout, posições locais, navegação, edição e exclusão usando o serviço oficial de relacionamentos.
 - Relatório técnico `docs/RELATIONSHIP_GRAPH_AND_COMPILER_V6.md`.
 - Temas por campanha com rascunho, publicação, aplicação, presets e validação.

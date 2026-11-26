@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- graph avatars use private thumbnail delivery. */
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -6,9 +7,10 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as Re
 import { Crosshair, Filter, Link2, LocateFixed, Maximize2, Minimize2, Minus, Pencil, Plus, RotateCcw, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { relationshipsApi, relationshipTypesApi } from '@/lib/api';
 import { autoLayoutRelationshipGraph, filterRelationshipGraph, relationshipGraphStorageKey, type RelationshipGraphPosition } from '@/lib/relationshipGraph';
-import { FILE_TYPE_LABELS, type FileType, type RelationshipGraphData, type RelationshipGraphEdge, type RelationshipImportance, type RelationshipType, type RelationshipVisibility } from '@/types';
+import { FILE_TYPE_LABELS, type FileType, type RelationshipGraphData, type RelationshipGraphEdge, type RelationshipGraphNode, type RelationshipImportance, type RelationshipType, type RelationshipVisibility } from '@/types';
 import { FileTypeIcon } from '@/components/fileTypeIcon';
 import { Button } from '@/components/ui/Button';
+import { mediaDeliveryUrl } from '@/lib/mediaUrl';
 import styles from './RelationshipGraphEditor.module.css';
 
 const NODE_WIDTH = 184;
@@ -33,6 +35,10 @@ const emptyForm: RelationshipForm = { fromId: '', toId: '', typeId: '', label: '
 
 function edgeColor(edge: RelationshipGraphEdge) {
   return edge.type.color && /^#[0-9a-f]{3,8}$/i.test(edge.type.color) ? edge.type.color : 'var(--color-accent-secondary)';
+}
+
+function GraphNodeContent({ node }: { node: RelationshipGraphNode }) {
+  return <div className={styles.nodeContent}>{node.image ? <img className={styles.nodeAvatar} src={mediaDeliveryUrl(node.image.id, 'thumbnail')} alt="" width={node.image.width ?? undefined} height={node.image.height ?? undefined} loading="lazy" /> : <span className={styles.nodeIcon}><FileTypeIcon type={node.type} size={16} /></span>}<span><strong>{node.name}</strong><small>{FILE_TYPE_LABELS[node.type]}</small></span></div>;
 }
 
 function readPositions(key: string): Record<string, RelationshipGraphPosition> {
@@ -309,7 +315,7 @@ export default function RelationshipGraphEditor({ campaignId, userId }: { campai
               const point = positionFor(node.id);
               const selected = selectedNodeId === node.id;
               const source = connectionSourceId === node.id;
-              return <g key={node.id} transform={`translate(${point.x} ${point.y})`} className={`${styles.node} ${selected ? styles.nodeSelected : ''} ${source ? styles.nodeSource : ''}`} style={{ '--node-accent': NODE_TYPE_COLORS[node.type] } as CSSProperties} onPointerDown={(event) => handleNodePointerDown(event, node.id)} onClick={(event) => { event.stopPropagation(); selectNode(node.id); }} role="button" tabIndex={0} aria-label={`${node.name}, ${FILE_TYPE_LABELS[node.type]}`}><rect x={-NODE_WIDTH / 2} y={-NODE_HEIGHT / 2} width={NODE_WIDTH} height={NODE_HEIGHT} rx="12" /><foreignObject x={-NODE_WIDTH / 2 + 14} y={-NODE_HEIGHT / 2 + 12} width={NODE_WIDTH - 28} height={NODE_HEIGHT - 24}><div className={styles.nodeContent}><FileTypeIcon type={node.type} size={16} /><span><strong>{node.name}</strong><small>{FILE_TYPE_LABELS[node.type]}</small></span></div></foreignObject></g>;
+              return <g key={node.id} transform={`translate(${point.x} ${point.y})`} className={`${styles.node} ${selected ? styles.nodeSelected : ''} ${source ? styles.nodeSource : ''}`} style={{ '--node-accent': NODE_TYPE_COLORS[node.type] } as CSSProperties} onPointerDown={(event) => handleNodePointerDown(event, node.id)} onClick={(event) => { event.stopPropagation(); selectNode(node.id); }} role="button" tabIndex={0} aria-label={`${node.name}, ${FILE_TYPE_LABELS[node.type]}`}><rect x={-NODE_WIDTH / 2} y={-NODE_HEIGHT / 2} width={NODE_WIDTH} height={NODE_HEIGHT} rx="12" /><foreignObject x={-NODE_WIDTH / 2 + 14} y={-NODE_HEIGHT / 2 + 12} width={NODE_WIDTH - 28} height={NODE_HEIGHT - 24}><GraphNodeContent node={node} /></foreignObject></g>;
             })}
           </g>
         </svg>

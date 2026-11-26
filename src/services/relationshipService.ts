@@ -295,14 +295,33 @@ export const relationshipService = {
         isTrashed: false,
         ...(fileIds !== null ? { id: { in: fileIds } } : {})
       },
-      select: { id: true, name: true, type: true }
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        mediaReferences: {
+          where: {
+            purpose: { in: ['PRIMARY', 'COVER'] },
+            ...(viewer.kind === 'OWNER' ? {} : { asset: { visibility: 'PUBLISHED' } })
+          },
+          select: { purpose: true, asset: { select: { id: true, displayName: true, altText: true, width: true, height: true } } },
+          take: 2
+        }
+      }
     });
     const activeFileIds = files.map((file) => file.id);
     const relationships = activeFileIds.length === 0
       ? []
       : await prisma.relationship.findMany({ where: visibleRelationshipWhere(campaignId, viewer, activeFileIds), include: relationshipInclude(), orderBy: { createdAt: 'asc' } });
     return {
-      nodes: files,
+      nodes: files.map(({ mediaReferences, ...file }) => {
+        const references = mediaReferences ?? [];
+        return {
+          ...file,
+          image: references.find((reference) => reference.purpose === 'PRIMARY')?.asset
+            ?? references.find((reference) => reference.purpose === 'COVER')?.asset
+        };
+      }),
       edges: relationships.map((relationship) => ({ id: relationship.id, sourceId: relationship.fromId, targetId: relationship.toId, type: relationship.type, label: relationship.label, description: relationship.description, importance: relationship.importance, visibility: relationship.visibility }))
     };
   },

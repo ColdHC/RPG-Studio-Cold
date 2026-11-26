@@ -58,6 +58,30 @@ describe('fileService publication boundary', () => {
     expect(mocks.publishedFileWhere).toHaveBeenCalledWith(expect.objectContaining({ kind: 'PLAYER', userId: 'player-1' }));
   });
 
+  it('remove marcadores e geometrias publicados que pertencem a uma camada privada', async () => {
+    mocks.campaignFileFindFirst.mockResolvedValue({
+      id: 'map-public',
+      type: 'MAP',
+      data: {
+        map: {
+          layers: [{ id: 'publica', access: 'PUBLISHED' }, { id: 'secreta', access: 'PRIVATE' }],
+          markers: [{ id: 'visivel', visibility: 'PUBLISHED', layerId: 'publica' }, { id: 'oculto', visibility: 'PUBLISHED', layerId: 'secreta' }],
+          geometries: [{ id: 'rota-visivel', visibility: 'PUBLISHED', layerId: 'publica' }, { id: 'rota-oculta', visibility: 'PUBLISHED', layerId: 'secreta' }]
+        }
+      }
+    });
+
+    await expect(fileService.get('map-public')).resolves.toMatchObject({
+      data: {
+        map: {
+          layers: [{ id: 'publica' }],
+          markers: [{ id: 'visivel' }],
+          geometries: [{ id: 'rota-visivel' }]
+        }
+      }
+    });
+  });
+
   it('mantém a política de publicação ao combinar busca e paginação da biblioteca', async () => {
     await fileService.list({ campaignId: 'campaign-1', search: 'pista', take: 40, skip: 0 });
     expect(mocks.campaignFileFindMany).toHaveBeenCalledWith(expect.objectContaining({

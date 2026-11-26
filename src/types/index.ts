@@ -158,6 +158,7 @@ export interface RelationshipGraphNode {
   id: string;
   name: string;
   type: FileType;
+  image?: Pick<MediaAsset, 'id' | 'displayName' | 'altText' | 'width' | 'height'>;
 }
 
 export interface RelationshipGraphEdge {

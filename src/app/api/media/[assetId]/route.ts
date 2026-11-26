@@ -4,13 +4,14 @@ import { mediaService } from '@/services/mediaService';
 
 export const runtime = 'nodejs';
 
-export async function GET(_request: NextRequest, { params }: { params: { assetId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { assetId: string } }) {
   try {
-    const { asset, object } = await mediaService.readForCurrentUser(params.assetId);
+    const variant = request.nextUrl.searchParams.get('variant') === 'thumbnail' ? 'thumbnail' : undefined;
+    const { object, contentType } = await mediaService.readForCurrentUser(params.assetId, variant);
     if (!object) return NextResponse.json({ error: 'Mídia não encontrada.' }, { status: 404 });
     return new NextResponse(object.stream, {
       headers: {
-        'Content-Type': asset.mimeType,
+        'Content-Type': contentType,
         'Content-Length': String(object.blob.size),
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff'

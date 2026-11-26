@@ -5,6 +5,7 @@ import { Star } from 'lucide-react';
 import { FileTypeIcon } from './fileTypeIcon';
 import type { CampaignFile } from '@/types';
 import { FILE_TYPE_LABELS } from '@/types';
+import { mediaDeliveryUrl } from '@/lib/mediaUrl';
 import styles from './FileListRow.module.css';
 
 interface FileListRowProps {
@@ -40,7 +41,7 @@ export function FileListRow({ file, selected, onOpen, onSelectToggle, onToggleFa
         onClick={(e) => e.stopPropagation()}
         onChange={onSelectToggle}
       />
-      <span className={styles.iconCell}>{image ? <img src={`/api/media/${image.id}`} alt="" /> : <FileTypeIcon type={file.type} size={15} />}</span>
+      <span className={styles.iconCell}>{image ? <img src={mediaDeliveryUrl(image.id, 'thumbnail')} alt="" width={image.width ?? undefined} height={image.height ?? undefined} /> : <FileTypeIcon type={file.type} size={15} />}</span>
       <span className={styles.name}>{file.name}</span>
       <span className={styles.typeCell}>{FILE_TYPE_LABELS[file.type]}</span>
       <span className={styles.dateCell}>{formatDate(file.updatedAt)}</span>

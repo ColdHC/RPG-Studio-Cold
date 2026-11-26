@@ -5,12 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown, ChevronUp, Crosshair, Edit3, Layers3, LoaderCircle, LocateFixed, Maximize2, Minus, Plus, RotateCcw, Save, X } from 'lucide-react';
 import { filesApi } from '@/lib/api';
+import { mediaDeliveryUrl } from '@/lib/mediaUrl';
 import type { CampaignFile } from '@/types';
 import { MediaPicker } from './MediaPicker';
 import styles from './MapStudio.module.css';
 
 type MapLayer = { id: string; name: string; visible: boolean; opacity: number; access?: 'PRIVATE' | 'PUBLISHED' };
-type MapMarker = { id: string; name: string; description?: string; category?: string; color?: string; icon?: string; x: number; y: number; layerId?: string; relatedFileId?: string; relatedMapId?: string; visibility?: 'PRIVATE' | 'PUBLISHED' };
+type MapMarker = { id: string; name: string; description?: string; category?: string; color?: string; icon?: string; imageAssetId?: string; x: number; y: number; layerId?: string; relatedFileId?: string; relatedMapId?: string; visibility?: 'PRIVATE' | 'PUBLISHED' };
 type MapPoint = { x: number; y: number };
 type MapGeometry = { id: string; type: 'LINE' | 'POLYGON' | 'CIRCLE'; name: string; description?: string; color?: string; opacity?: number; strokeWidth?: number; layerId?: string; visibility?: 'PRIVATE' | 'PUBLISHED'; points: MapPoint[] };
 type MapData = { layers?: MapLayer[]; markers?: MapMarker[]; geometries?: MapGeometry[] };
@@ -31,6 +32,7 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
   const stageRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | null>(null);
   const markerDragRef = useRef<string | null>(null);
+  const geometryDragRef = useRef<{ geometryId: string; pointIndex: number } | null>(null);
   const dataRef = useRef<Required<MapData> | null>(null);
   const saveChainRef = useRef(Promise.resolve());
   const [file, setFile] = useState<CampaignFile | null>(null);
@@ -46,6 +48,7 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedGeometryId, setSelectedGeometryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const viewportStorageKey = `rpg-studio:map-view:${campaignId}:${fileId}`;
 
   const load = useCallback(async () => {
@@ -83,6 +86,10 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
   const mapAsset = file?.mediaReferences?.find((reference) => reference.purpose === 'MAP')?.asset;
   const selected = data?.markers.find((marker) => marker.id === selectedId) ?? null;
   const selectedGeometry = data?.geometries.find((geometry) => geometry.id === selectedGeometryId) ?? null;
+  const selectedRelatedFile = selected?.relatedFileId ? targets.find((target) => target.id === selected.relatedFileId) : undefined;
+  const selectedRelatedMap = selected?.relatedMapId ? targets.find((target) => target.id === selected.relatedMapId) : undefined;
+  const selectedRelatedFileImage = selectedRelatedFile?.mediaReferences?.find((reference) => reference.purpose === 'PRIMARY' || reference.purpose === 'COVER')?.asset;
+  const selectedRelatedMapImage = selectedRelatedMap?.mediaReferences?.find((reference) => reference.purpose === 'PRIMARY' || reference.purpose === 'COVER')?.asset;
   const visibleLayers = useMemo(() => new Set((data?.layers ?? []).filter((layer) => layer.visible).map((layer) => layer.id)), [data]);
   const layerOpacities = useMemo(() => new Map((data?.layers ?? []).map((layer) => [layer.id, layer.opacity])), [data]);
   const imageBox = useMemo(() => {
@@ -95,6 +102,8 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
     const height = (viewportRatio / imageRatio) * 100;
     return { left: 0, top: (100 - height) / 2, width: 100, height };
   }, [imageRatio, viewport]);
+
+  useEffect(() => { setImageFailed(false); }, [mapAsset?.id]);
 
   function persist(next: Required<MapData>) {
     if (!file) return;
@@ -159,6 +168,21 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
     event.currentTarget.setPointerCapture(event.pointerId);
   }
   function pointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (geometryDragRef.current && editable) {
+      const point = pointFromEvent(event);
+      const current = dataRef.current;
+      if (!point || !current) return;
+      const { geometryId, pointIndex } = geometryDragRef.current;
+      const next = {
+        ...current,
+        geometries: current.geometries.map((geometry) => geometry.id === geometryId
+          ? { ...geometry, points: geometry.points.map((existing, index) => index === pointIndex ? point : existing) }
+          : geometry)
+      };
+      dataRef.current = next;
+      setData(next);
+      return;
+    }
     if (markerDragRef.current && editable) {
       const point = pointFromEvent(event);
       const current = dataRef.current;
@@ -173,6 +197,11 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
     setPan({ x: drag.panX + dx, y: drag.panY + dy });
   }
   function pointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (geometryDragRef.current) {
+      geometryDragRef.current = null;
+      if (dataRef.current) void persist(dataRef.current);
+      return;
+    }
     if (markerDragRef.current) {
       markerDragRef.current = null;
       if (dataRef.current) void persist(dataRef.current);
@@ -195,6 +224,13 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
     void persist({ ...data, markers: [...data.markers, marker] }); setSelectedId(marker.id);
   }
 
+  function beginGeometryPointDrag(event: React.PointerEvent<SVGCircleElement>, geometryId: string, pointIndex: number) {
+    if (!editable) return;
+    event.stopPropagation();
+    geometryDragRef.current = { geometryId, pointIndex };
+    stageRef.current?.setPointerCapture(event.pointerId);
+  }
+
   if (!file || !data) return <div className={styles.loading}><LoaderCircle size={20} />Carregando mapa…</div>;
   return <div className={styles.page}>
     <header className={styles.header}><div><span>Mapa da campanha</span><h1>{file.name}</h1>{file.description && <p>{file.description}</p>}</div><div className={styles.headerActions}><button type="button" onClick={() => router.back()}><ArrowLeft size={14} />Voltar</button>{editable && <button type="button" className={editing ? styles.activeAction : ''} onClick={() => { setEditing((value) => !value); setDraftGeometry(null); }}><Edit3 size={14} />{editing ? 'Encerrar edição' : 'Editar mapa'}</button>}{editable && editing && <select className={styles.toolSelect} value={tool} onChange={(event) => { setTool(event.target.value as typeof tool); setDraftGeometry(null); }} aria-label="Ferramenta de desenho"><option value="MARKER">Marcador</option><option value="LINE">Linha ou rota</option><option value="POLYGON">Região</option><option value="CIRCLE">Círculo</option></select>}{draftGeometry && <button type="button" onClick={finishGeometry} disabled={draftGeometry.points.length < (draftGeometry.type === 'POLYGON' ? 3 : 2)}>Concluir desenho</button>}<button type="button" onClick={() => stageRef.current?.requestFullscreen?.()}><Maximize2 size={14} />Tela cheia</button></div></header>
@@ -202,9 +238,58 @@ export function MapStudio({ campaignId, fileId, editable }: { campaignId: string
     {mapAsset && <div className={styles.workspace}>
       <aside className={styles.panel}><div className={styles.panelTitle}><Layers3 size={15} />Camadas</div>{data.layers.map((layer, index) => <div className={styles.layer} key={layer.id}><label><input type="checkbox" checked={layer.visible} onChange={(event) => setLayers((layers) => layers.map((value) => value.id === layer.id ? { ...value, visible: event.target.checked } : value))} />{layer.name}</label>{editable && <><input className={styles.layerInput} aria-label={`Nome da camada ${index + 1}`} value={layer.name} onChange={(event) => setLayers((layers) => layers.map((value) => value.id === layer.id ? { ...value, name: event.target.value } : value))} /><label className={styles.layerSetting}>Opacidade<input type="range" min="0" max="1" step="0.05" value={layer.opacity} onChange={(event) => setLayers((layers) => layers.map((value) => value.id === layer.id ? { ...value, opacity: Number(event.target.value) } : value))} /></label><label className={styles.layerSetting}>Acesso<select value={layer.access} onChange={(event) => setLayers((layers) => layers.map((value) => value.id === layer.id ? { ...value, access: event.target.value as 'PRIVATE' | 'PUBLISHED' } : value))}><option value="PUBLISHED">Jogadores</option><option value="PRIVATE">Mestre</option></select></label><div className={styles.layerActions}><button type="button" disabled={!index} onClick={() => setLayers((layers) => { const copy = [...layers]; [copy[index - 1], copy[index]] = [copy[index]!, copy[index - 1]!]; return copy; })}><ChevronUp size={13} /></button><button type="button" disabled={index === data.layers.length - 1} onClick={() => setLayers((layers) => { const copy = [...layers]; [copy[index + 1], copy[index]] = [copy[index]!, copy[index + 1]!]; return copy; })}><ChevronDown size={13} /></button></div></>}</div>)}{editable && <button type="button" className={styles.newLayer} onClick={() => setLayers((layers) => [...layers, { id: createId(), name: `Camada ${layers.length + 1}`, visible: true, opacity: 1, access: 'PUBLISHED' }])}>Adicionar camada</button>}</aside>
       <main ref={stageRef} className={`${styles.stage} ${editing ? styles.editing : ''}`} onWheel={(event) => { event.preventDefault(); setZoom((value) => Math.max(.5, Math.min(3, value + (event.deltaY < 0 ? .15 : -.15)))); }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}>
-        <div className={styles.canvas} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}><img src={`/api/media/${mapAsset.id}`} alt={mapAsset.altText || file.name} draggable={false} onLoad={(event) => { if (event.currentTarget.naturalWidth && event.currentTarget.naturalHeight) setImageRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight); }} /><svg className={styles.geometryLayer} viewBox="0 0 100 100" preserveAspectRatio="none">{data.geometries.filter((geometry) => (editable || geometry.visibility === 'PUBLISHED') && (!geometry.layerId || visibleLayers.has(geometry.layerId))).map((geometry) => { const points = geometry.points.map(projectPoint); const layerOpacity = geometry.layerId ? (layerOpacities.get(geometry.layerId) ?? 1) : 1; const opacity = (geometry.opacity ?? .65) * layerOpacity; const common = { stroke: geometry.color, strokeWidth: geometry.strokeWidth, strokeOpacity: opacity, fill: geometry.type === 'POLYGON' ? geometry.color : 'none', fillOpacity: geometry.type === 'POLYGON' ? opacity : 0 }; if (geometry.type === 'CIRCLE') { const center = points[0]; const edge = points[1]; if (!center || !edge) return null; return <ellipse key={geometry.id} className={styles.geometry} cx={center.x} cy={center.y} rx={Math.abs(edge.x - center.x)} ry={Math.abs(edge.y - center.y)} {...common} onClick={(event) => { event.stopPropagation(); setSelectedGeometryId(geometry.id); setSelectedId(null); }} />; } const pointString = points.map((point) => `${point.x},${point.y}`).join(' '); return geometry.type === 'POLYGON' ? <polygon key={geometry.id} className={styles.geometry} points={pointString} {...common} onClick={(event) => { event.stopPropagation(); setSelectedGeometryId(geometry.id); setSelectedId(null); }} /> : <polyline key={geometry.id} className={styles.geometry} points={pointString} {...common} onClick={(event) => { event.stopPropagation(); setSelectedGeometryId(geometry.id); setSelectedId(null); }} />; })}{draftGeometry && <polyline className={styles.geometryDraft} points={draftGeometry.points.map(projectPoint).map((point) => `${point.x},${point.y}`).join(' ')} fill="none" />}</svg>{data.markers.filter((marker) => (editable || marker.visibility === 'PUBLISHED') && (!marker.layerId || visibleLayers.has(marker.layerId))).map((marker) => <button type="button" key={marker.id} className={`${styles.marker} ${selectedId === marker.id ? styles.markerSelected : ''}`} style={{ left: `${imageBox.left + imageBox.width * marker.x / 100}%`, top: `${imageBox.top + imageBox.height * marker.y / 100}%`, opacity: marker.layerId ? (layerOpacities.get(marker.layerId) ?? 1) : 1, '--marker-color': marker.color } as React.CSSProperties} onPointerDown={(event) => { event.stopPropagation(); if (editable) { markerDragRef.current = marker.id; event.currentTarget.setPointerCapture(event.pointerId); } }} onClick={() => { setSelectedId(marker.id); setSelectedGeometryId(null); }} aria-label={`Abrir marcador ${marker.name}`}><Crosshair size={17} /></button>)}</div>
+        <div className={styles.canvas} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+          {imageFailed ? <div className={styles.imageError}>Não foi possível carregar a imagem deste mapa.</div> : <img src={`/api/media/${mapAsset.id}`} alt={mapAsset.altText || file.name} draggable={false} onError={() => setImageFailed(true)} onLoad={(event) => { if (event.currentTarget.naturalWidth && event.currentTarget.naturalHeight) setImageRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight); }} />}
+          <svg className={styles.geometryLayer} viewBox="0 0 100 100" preserveAspectRatio="none">
+            {data.geometries.filter((geometry) => (editable || geometry.visibility === 'PUBLISHED') && (!geometry.layerId || visibleLayers.has(geometry.layerId))).map((geometry) => {
+              const points = geometry.points.map(projectPoint);
+              const layerOpacity = geometry.layerId ? (layerOpacities.get(geometry.layerId) ?? 1) : 1;
+              const opacity = (geometry.opacity ?? .65) * layerOpacity;
+              const common = { stroke: geometry.color, strokeWidth: geometry.strokeWidth, strokeOpacity: opacity, fill: geometry.type === 'POLYGON' ? geometry.color : 'none', fillOpacity: geometry.type === 'POLYGON' ? opacity : 0 };
+              if (geometry.type === 'CIRCLE') {
+                const center = points[0];
+                const edge = points[1];
+                if (!center || !edge) return null;
+                return <ellipse key={geometry.id} className={styles.geometry} cx={center.x} cy={center.y} rx={Math.abs(edge.x - center.x)} ry={Math.abs(edge.y - center.y)} {...common} onClick={(event) => { event.stopPropagation(); setSelectedGeometryId(geometry.id); setSelectedId(null); }} />;
+              }
+              const pointString = points.map((point) => `${point.x},${point.y}`).join(' ');
+              return geometry.type === 'POLYGON'
+                ? <polygon key={geometry.id} className={styles.geometry} points={pointString} {...common} onClick={(event) => { event.stopPropagation(); setSelectedGeometryId(geometry.id); setSelectedId(null); }} />
+                : <polyline key={geometry.id} className={styles.geometry} points={pointString} {...common} onClick={(event) => { event.stopPropagation(); setSelectedGeometryId(geometry.id); setSelectedId(null); }} />;
+            })}
+            {editing && selectedGeometry?.points.map((point, pointIndex) => {
+              const projected = projectPoint(point);
+              return <circle key={`${selectedGeometry.id}-${pointIndex}`} className={styles.vertexHandle} cx={projected.x} cy={projected.y} r="1.35" onPointerDown={(event) => beginGeometryPointDrag(event, selectedGeometry.id, pointIndex)} />;
+            })}
+            {draftGeometry && <polyline className={styles.geometryDraft} points={draftGeometry.points.map(projectPoint).map((point) => `${point.x},${point.y}`).join(' ')} fill="none" />}
+          </svg>
+          {data.markers.filter((marker) => (editable || marker.visibility === 'PUBLISHED') && (!marker.layerId || visibleLayers.has(marker.layerId))).map((marker) => <button type="button" key={marker.id} className={`${styles.marker} ${selectedId === marker.id ? styles.markerSelected : ''}`} style={{ left: `${imageBox.left + imageBox.width * marker.x / 100}%`, top: `${imageBox.top + imageBox.height * marker.y / 100}%`, opacity: marker.layerId ? (layerOpacities.get(marker.layerId) ?? 1) : 1, '--marker-color': marker.color } as React.CSSProperties} onPointerDown={(event) => { event.stopPropagation(); if (editable) { markerDragRef.current = marker.id; event.currentTarget.setPointerCapture(event.pointerId); } }} onClick={() => { setSelectedId(marker.id); setSelectedGeometryId(null); }} aria-label={`Abrir marcador ${marker.name}`}>{marker.imageAssetId ? <img src={mediaDeliveryUrl(marker.imageAssetId, 'thumbnail')} alt="" /> : <Crosshair size={17} />}</button>)}
+        </div>
       </main>
-      <aside className={styles.panel}>{selected ? <><div className={styles.panelTitle}><LocateFixed size={15} />Marcador</div>{editable ? <div className={styles.markerForm}><label>Nome<input value={selected.name} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, name: event.target.value } : marker))} /></label><label>Categoria<input value={selected.category ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, category: event.target.value } : marker))} /></label><label>Cor<input type="color" value={selected.color ?? '#c8a66a'} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, color: event.target.value } : marker))} /></label><label>Camada<select value={selected.layerId ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, layerId: event.target.value || undefined } : marker))}><option value="">Sem camada</option>{data.layers.map((layer) => <option key={layer.id} value={layer.id}>{layer.name}</option>)}</select></label><label>Descrição<textarea value={selected.description ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, description: event.target.value } : marker))} /></label><label>Entidade relacionada<select value={selected.relatedFileId ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, relatedFileId: event.target.value || undefined } : marker))}><option value="">Nenhuma</option>{targets.filter((target) => target.type !== 'MAP').map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label><label>Mapa relacionado<select value={selected.relatedMapId ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, relatedMapId: event.target.value || undefined } : marker))}><option value="">Nenhum</option>{targets.filter((target) => target.type === 'MAP').map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label><label>Visibilidade<select value={selected.visibility} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, visibility: event.target.value as 'PRIVATE' | 'PUBLISHED' } : marker))}><option value="PRIVATE">Somente mestre</option><option value="PUBLISHED">Publicada</option></select></label><button type="button" className={styles.danger} onClick={() => { setMarkers((markers) => markers.filter((marker) => marker.id !== selected.id)); setSelectedId(null); }}><X size={14} />Excluir marcador</button></div> : <><h2>{selected.name}</h2>{selected.category && <span className={styles.category}>{selected.category}</span>}{selected.description && <p>{selected.description}</p>}{selected.relatedMapId && <button type="button" className={styles.openLink} onClick={() => router.push(`/campaigns/${campaignId}/mapa/${selected.relatedMapId}` as never)}>Abrir mapa relacionado</button>}{selected.relatedFileId && <button type="button" className={styles.openLink} onClick={() => router.push(`/campaigns/${campaignId}/arquivos/${selected.relatedFileId}` as never)}>Abrir entidade</button>}</>}</> : <div className={styles.hint}>{editing ? 'Clique sobre o mapa para adicionar um marcador. Arraste para navegar.' : 'Selecione um marcador para consultar suas informações.'}</div>}</aside>
+      <aside className={styles.panel}>
+        {selected ? <>
+          <div className={styles.panelTitle}><LocateFixed size={15} />Marcador</div>
+          {editable ? <div className={styles.markerForm}>
+            <label>Nome<input value={selected.name} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, name: event.target.value } : marker))} /></label>
+            <label>Categoria<input value={selected.category ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, category: event.target.value } : marker))} /></label>
+            <label>Cor<input type="color" value={selected.color ?? '#c8a66a'} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, color: event.target.value } : marker))} /></label>
+            <label>Camada<select value={selected.layerId ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, layerId: event.target.value || undefined } : marker))}><option value="">Sem camada</option>{data.layers.map((layer) => <option key={layer.id} value={layer.id}>{layer.name}</option>)}</select></label>
+            <label>Descrição<textarea value={selected.description ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, description: event.target.value } : marker))} /></label>
+            <div className={styles.markerImagePicker}><span>Imagem do marcador</span>{selected.imageAssetId && <img src={mediaDeliveryUrl(selected.imageAssetId, 'thumbnail')} alt="" />}<MediaPicker campaignId={campaignId} fileId={fileId} purpose="MARKER" triggerLabel={selected.imageAssetId ? 'Substituir imagem' : 'Escolher imagem'} onSelect={(asset) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, imageAssetId: asset.id } : marker))} />{selected.imageAssetId && <button type="button" onClick={() => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, imageAssetId: undefined } : marker))}>Remover imagem</button>}</div>
+            <label>Entidade relacionada<select value={selected.relatedFileId ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, relatedFileId: event.target.value || undefined } : marker))}><option value="">Nenhuma</option>{targets.filter((target) => target.type !== 'MAP').map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
+            <label>Mapa relacionado<select value={selected.relatedMapId ?? ''} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, relatedMapId: event.target.value || undefined } : marker))}><option value="">Nenhum</option>{targets.filter((target) => target.type === 'MAP').map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
+            <label>Visibilidade<select value={selected.visibility} onChange={(event) => setMarkers((markers) => markers.map((marker) => marker.id === selected.id ? { ...marker, visibility: event.target.value as 'PRIVATE' | 'PUBLISHED' } : marker))}><option value="PRIVATE">Somente mestre</option><option value="PUBLISHED">Publicada</option></select></label>
+            <button type="button" className={styles.danger} onClick={() => { setMarkers((markers) => markers.filter((marker) => marker.id !== selected.id)); setSelectedId(null); }}><X size={14} />Excluir marcador</button>
+          </div> : <div className={styles.markerPreview}>
+            {selected.imageAssetId && <img src={mediaDeliveryUrl(selected.imageAssetId, 'thumbnail')} alt="" />}
+            <h2>{selected.name}</h2>
+            {selected.category && <span className={styles.category}>{selected.category}</span>}
+            {selected.description && <p>{selected.description}</p>}
+            {selectedRelatedFile && <div className={styles.relatedPreview}>{selectedRelatedFileImage && <img src={mediaDeliveryUrl(selectedRelatedFileImage.id, 'thumbnail')} alt="" />}<strong>{selectedRelatedFile.name}</strong>{selectedRelatedFile.description && <span>{selectedRelatedFile.description}</span>}<button type="button" className={styles.openLink} onClick={() => router.push(`/campaigns/${campaignId}/arquivos/${selectedRelatedFile.id}` as never)}>Abrir entidade</button></div>}
+            {selectedRelatedMap && <div className={styles.relatedPreview}>{selectedRelatedMapImage && <img src={mediaDeliveryUrl(selectedRelatedMapImage.id, 'thumbnail')} alt="" />}<strong>{selectedRelatedMap.name}</strong>{selectedRelatedMap.description && <span>{selectedRelatedMap.description}</span>}<button type="button" className={styles.openLink} onClick={() => router.push(`/campaigns/${campaignId}/mapa/${selectedRelatedMap.id}` as never)}>Abrir mapa relacionado</button></div>}
+          </div>}
+        </> : <div className={styles.hint}>{editing ? 'Clique sobre o mapa para adicionar um marcador. Arraste para navegar.' : 'Selecione um marcador para consultar suas informações.'}</div>}
+      </aside>
     </div>}
     {mapAsset && selectedGeometry && <section className={styles.geometryPanel} aria-label="Detalhes da geometria">{editable ? <><label>Nome<input value={selectedGeometry.name} onChange={(event) => setGeometries((geometries) => geometries.map((geometry) => geometry.id === selectedGeometry.id ? { ...geometry, name: event.target.value } : geometry))} /></label><label>Descrição<textarea value={selectedGeometry.description ?? ''} onChange={(event) => setGeometries((geometries) => geometries.map((geometry) => geometry.id === selectedGeometry.id ? { ...geometry, description: event.target.value } : geometry))} /></label><label>Camada<select value={selectedGeometry.layerId ?? ''} onChange={(event) => setGeometries((geometries) => geometries.map((geometry) => geometry.id === selectedGeometry.id ? { ...geometry, layerId: event.target.value || undefined } : geometry))}><option value="">Sem camada</option>{data.layers.map((layer) => <option key={layer.id} value={layer.id}>{layer.name}</option>)}</select></label><label>Visibilidade<select value={selectedGeometry.visibility} onChange={(event) => setGeometries((geometries) => geometries.map((geometry) => geometry.id === selectedGeometry.id ? { ...geometry, visibility: event.target.value as 'PRIVATE' | 'PUBLISHED' } : geometry))}><option value="PRIVATE">Somente mestre</option><option value="PUBLISHED">Publicada</option></select></label><button type="button" className={styles.danger} onClick={() => { setGeometries((geometries) => geometries.filter((geometry) => geometry.id !== selectedGeometry.id)); setSelectedGeometryId(null); }}><X size={14} />Excluir geometria</button></> : <><strong>{selectedGeometry.name}</strong>{selectedGeometry.description && <p>{selectedGeometry.description}</p>}</>}</section>}
     {mapAsset && <div className={styles.controls}><button type="button" onClick={() => setZoom((value) => Math.max(.5, value - .15))}><Minus size={15} /></button><button type="button" onClick={() => setZoom((value) => Math.min(3, value + .15))}><Plus size={15} /></button><button type="button" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}><RotateCcw size={15} />Ajustar</button>{saving && <span><Save size={14} />Salvando…</span>}</div>}

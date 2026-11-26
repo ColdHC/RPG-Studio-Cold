@@ -13,7 +13,7 @@ function unavailable(): never {
 export const mediaStorage = {
   isConfigured: storageConfigured,
 
-  async put(key: string, bytes: ArrayBuffer, contentType: string) {
+  async put(key: string, bytes: ArrayBuffer | Buffer, contentType: string) {
     if (!storageConfigured()) unavailable();
     return put(key, bytes, { access: 'private', addRandomSuffix: false, contentType, cacheControlMaxAge: 60 * 60 * 24 * 30 });
   },

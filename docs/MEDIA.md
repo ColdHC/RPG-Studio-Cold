@@ -8,13 +8,13 @@ O adaptador atual é `src/lib/mediaStorage.ts`, baseado em Vercel Blob privado. 
 
 ## Configuração
 
-Crie/conecte um Blob Store privado na Vercel e configure `BLOB_READ_WRITE_TOKEN` para runtime autenticado. Ajustes opcionais: `MEDIA_MAX_IMAGE_BYTES`, `MEDIA_MAX_UPLOAD_FILES` e `MEDIA_MAX_IMAGE_PIXELS`. Sem essa variável a biblioteca permanece navegável, mas upload retorna 503 com instrução explícita; não há fallback para filesystem temporário ou Base64.
+Crie/conecte um Blob Store privado na Vercel e configure `BLOB_READ_WRITE_TOKEN` para runtime autenticado. Ajustes opcionais: `MEDIA_MAX_IMAGE_BYTES`, `MEDIA_MAX_UPLOAD_FILES`, `MEDIA_MAX_IMAGE_PIXELS` e `MEDIA_THUMBNAIL_MAX_SIDE` (480 px por padrão). Sem essa variável a biblioteca permanece navegável, mas upload retorna 503 com instrução explícita; não há fallback para filesystem temporário ou Base64.
 
 ## Upload, formatos e custos
 
 O servidor lê assinatura e dimensões reais antes do upload, aceita PNG/JPEG/GIF/WebP e rejeita SVG e conteúdo ativo. O limite padrão é 10 MB, 10 arquivos por envio e 40 milhões de pixels. O upload atual passa pela rota Node para validar conteúdo; para arquivos grandes ou variantes geradas, prefira futuro upload direto assinado após medir custo/volume.
 
-Ainda não há geração automática de thumbnails, conversão WebP/AVIF ou limpeza automática de órfãos. O original é preservado; cards e galeria usam lazy loading e dimensões reservadas. Não há estimativa de custo no checkout: armazenamento, transformações e transferência dependem do plano/configuração do Blob.
+Cada upload gera uma miniatura WebP privada, com o maior lado limitado por `MEDIA_THUMBNAIL_MAX_SIDE`; assets anteriores a essa evolução a geram sob demanda na primeira solicitação reduzida. Biblioteca, seletor, cartões, galerias, avatares do grafo e prévias de marcador usam essa variante; documento, lightbox e mapa preservam o original. Ainda não há variantes responsivas múltiplas, conversão AVIF ou limpeza automática de órfãos. Não há estimativa de custo no checkout: armazenamento, transformações e transferência dependem do plano/configuração do Blob.
 
 ## Visibilidade e exclusão
 

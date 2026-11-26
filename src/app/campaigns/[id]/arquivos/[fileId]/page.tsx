@@ -37,6 +37,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import type { CampaignFile, Tag, SystemType, SheetData, ChecklistItem } from '@/types';
 import { FILE_TYPE_LABELS } from '@/types';
 import { markdownOutline, markdownToHtml } from '@/lib/markdown';
+import { mediaDeliveryUrl } from '@/lib/mediaUrl';
 import styles from './page.module.css';
 
 const deferredPanelFallback = () => <div style={{ minHeight: 24 }} aria-hidden="true" />;
@@ -338,7 +339,7 @@ export default function FileEditorPage() {
           <article className={`${styles.document} ${mode === 'read' ? styles.readDocument : ''} ${mediaLayout.layout === 'WIDE' ? styles.wideDocument : ''} ${mediaLayout.layout === 'PRIMARY_SIDE' ? styles.primarySideDocument : ''}`} aria-label="Documento">
             {coverImage && <div className={styles.cover} style={{ backgroundImage: `url(${coverImage})`, height: `${coverHeight}px`, backgroundPosition: coverPosition, backgroundSize: mediaLayout.coverFit || 'cover' }} aria-label="Imagem de capa do documento" />}
             <div className={styles.documentBody}>
-              {mediaLayout.layout === 'PRIMARY_SIDE' && primaryAsset && <button type="button" className={styles.inlinePrimaryImage} onClick={() => setReaderImage({ url: `/api/media/${primaryAsset.id}`, alt: primaryAsset.altText || primaryAsset.displayName })}><img src={`/api/media/${primaryAsset.id}`} alt={primaryAsset.altText || primaryAsset.displayName} /></button>}
+              {mediaLayout.layout === 'PRIMARY_SIDE' && primaryAsset && <button type="button" className={styles.inlinePrimaryImage} onClick={() => setReaderImage({ url: mediaDeliveryUrl(primaryAsset.id), alt: primaryAsset.altText || primaryAsset.displayName })}><img src={mediaDeliveryUrl(primaryAsset.id, 'thumbnail')} alt={primaryAsset.altText || primaryAsset.displayName} width={primaryAsset.width ?? undefined} height={primaryAsset.height ?? undefined} /></button>}
               <div className={styles.documentContent}>
               <div className={styles.documentIdentity}>
                 <span className={styles.documentIcon}><FileTypeIcon type={file.type} size={22} /></span>
@@ -359,7 +360,7 @@ export default function FileEditorPage() {
 
           <div className={styles.panel}>
             <div className={styles.panelTitle}>Imagens da entidade</div>
-            {primaryAsset && <div className={styles.mediaPreview}><img src={`/api/media/${primaryAsset.id}`} alt={primaryAsset.altText || primaryAsset.displayName} /><span>{primaryAsset.displayName}</span></div>}
+            {primaryAsset && <div className={styles.mediaPreview}><img src={mediaDeliveryUrl(primaryAsset.id, 'thumbnail')} alt={primaryAsset.altText || primaryAsset.displayName} width={primaryAsset.width ?? undefined} height={primaryAsset.height ?? undefined} /><span>{primaryAsset.displayName}</span></div>}
             <div className={styles.mediaActions}>
               <MediaPicker campaignId={campaignId} fileId={fileId} purpose="COVER" replace triggerLabel={coverAsset ? 'Substituir capa' : 'Definir capa'} onSelect={() => load()} />
               <MediaPicker campaignId={campaignId} fileId={fileId} purpose="PRIMARY" replace triggerLabel={primaryAsset ? 'Substituir imagem' : 'Imagem principal'} onSelect={() => load()} />

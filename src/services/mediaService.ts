@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { Prisma, type MediaVisibility } from '@prisma/client';
 import { assertOwnedCampaignForWrite, AccessDeniedError } from '@/lib/access';
 import { inspectImage, safeFileName } from '@/lib/media';
+import { hasPublishedMarkerAsset } from '@/lib/mapMedia';
 import { mediaStorage, MEDIA_STORAGE_PROVIDER } from '@/lib/mediaStorage';
+import { createMediaThumbnail } from '@/lib/mediaThumbnail.server';
+import { mediaDeliveryUrl, type MediaDeliveryVariant } from '@/lib/mediaUrl';
 import { prisma } from '@/lib/prisma';
 import { getViewerContext, publishedFileWhere } from '@/lib/publicationPolicy';
 import { requireUser } from '@/lib/auth';
@@ -43,12 +46,8 @@ export type MediaListParams = {
   direction?: 'asc' | 'desc';
 };
 
-function mediaUrl(assetId: string) {
-  return `/api/media/${assetId}`;
-}
-
 function withDeliveryUrl<T extends { id: string }>(asset: T) {
-  return { ...asset, url: mediaUrl(asset.id) };
+  return { ...asset, url: mediaDeliveryUrl(asset.id) };
 }
 
 function notFound(): never {
@@ -96,6 +95,14 @@ export const mediaService = {
     const inspected = inspectImage(bytes);
     const key = `campaigns/${input.campaignId}/media/${randomUUID()}-${safeFileName(input.file.name)}`;
     await mediaStorage.put(key, bytes, inspected.mimeType);
+    let thumbnailKey: string | null = null;
+    try {
+      const thumbnail = await createMediaThumbnail(bytes);
+      thumbnailKey = `${key}.thumbnail.webp`;
+      await mediaStorage.put(thumbnailKey, thumbnail, 'image/webp');
+    } catch {
+      thumbnailKey = null;
+    }
     try {
       const asset = await prisma.mediaAsset.create({
         data: {
@@ -110,6 +117,7 @@ export const mediaService = {
           byteSize: input.file.size,
           width: inspected.width,
           height: inspected.height,
+          thumbnailKey,
           category: input.category?.trim() || null,
           tags: [...new Set(input.tags ?? [])],
           visibility: input.visibility ?? 'PRIVATE',
@@ -120,7 +128,7 @@ export const mediaService = {
       void recordAudit({ campaignId: input.campaignId, actorId: user.id, action: 'MEDIA_UPLOADED', entityType: 'MediaAsset', entityId: asset.id, metadata: { mimeType: asset.mimeType, byteSize: asset.byteSize } }).catch(() => undefined);
       return withDeliveryUrl(asset);
     } catch (error) {
-      await mediaStorage.delete(key).catch(() => undefined);
+      await Promise.all([mediaStorage.delete(key).catch(() => undefined), ...(thumbnailKey ? [mediaStorage.delete(thumbnailKey).catch(() => undefined)] : [])]);
       throw error;
     }
   },
@@ -208,26 +216,59 @@ export const mediaService = {
     await assertOwnedCampaignForWrite(campaignId);
     const asset = await prisma.mediaAsset.findFirst({
       where: { id: assetId, campaignId },
-      select: { id: true, storageKey: true, references: { select: { file: { select: { name: true } } } } }
+      select: { id: true, storageKey: true, thumbnailKey: true, references: { select: { file: { select: { name: true } } } } }
     });
     if (!asset) notFound();
     if (asset.references.length) {
       const names = asset.references.map((reference) => reference.file.name).slice(0, 3).join(', ');
       throw Object.assign(new Error(`Esta mídia ainda é usada por: ${names}${asset.references.length > 3 ? '…' : ''}. Remova ou substitua as referências antes de excluí-la.`), { status: 409 });
     }
-    await mediaStorage.delete(asset.storageKey);
+    await Promise.all([mediaStorage.delete(asset.storageKey), ...(asset.thumbnailKey ? [mediaStorage.delete(asset.thumbnailKey).catch(() => undefined)] : [])]);
     await prisma.mediaAsset.delete({ where: { id: assetId } });
   },
 
-  async readForCurrentUser(assetId: string) {
-    const asset = await prisma.mediaAsset.findUnique({ where: { id: assetId }, select: { id: true, campaignId: true, storageKey: true, mimeType: true, visibility: true, references: { select: { fileId: true } } } });
+  async readForCurrentUser(assetId: string, variant?: MediaDeliveryVariant) {
+    const asset = await prisma.mediaAsset.findUnique({ where: { id: assetId }, select: { id: true, campaignId: true, storageKey: true, thumbnailKey: true, mimeType: true, visibility: true, references: { select: { fileId: true, purpose: true } } } });
     if (!asset) notFound();
     const viewer = await getViewerContext(asset.campaignId, { requirePlayerMode: true });
     if (viewer.kind !== 'OWNER') {
       if (asset.visibility !== 'PUBLISHED' || asset.references.length === 0) notFound();
-      const visibleReference = await prisma.campaignFile.findFirst({ where: { id: { in: asset.references.map((reference) => reference.fileId) }, ...publishedFileWhere(viewer) }, select: { id: true } });
-      if (!visibleReference) notFound();
+      const regularReferenceFileIds = asset.references.filter((reference) => reference.purpose !== 'MARKER').map((reference) => reference.fileId);
+      const visibleReference = regularReferenceFileIds.length
+        ? await prisma.campaignFile.findFirst({ where: { id: { in: regularReferenceFileIds }, ...publishedFileWhere(viewer) }, select: { id: true } })
+        : null;
+      if (!visibleReference) {
+        const markerReferenceFileIds = asset.references.filter((reference) => reference.purpose === 'MARKER').map((reference) => reference.fileId);
+        const visibleMap = markerReferenceFileIds.length
+          ? await prisma.campaignFile.findFirst({ where: { id: { in: markerReferenceFileIds }, type: 'MAP', ...publishedFileWhere(viewer) }, select: { data: true } })
+          : null;
+        if (!visibleMap || !hasPublishedMarkerAsset(visibleMap.data, assetId)) notFound();
+      }
     }
-    return { asset, object: await mediaStorage.read(asset.storageKey) };
+    if (variant !== 'thumbnail') return { asset, object: await mediaStorage.read(asset.storageKey), contentType: asset.mimeType };
+    if (asset.thumbnailKey) {
+      try {
+        return { asset, object: await mediaStorage.read(asset.thumbnailKey), contentType: 'image/webp' };
+      } catch {
+        // An absent derived object can be safely regenerated from the protected original below.
+      }
+    }
+    const original = await mediaStorage.read(asset.storageKey);
+    if (!original) notFound();
+    try {
+      const thumbnail = await createMediaThumbnail(await new Response(original.stream).arrayBuffer());
+      const thumbnailKey = `${asset.storageKey}.thumbnail.webp`;
+      await mediaStorage.put(thumbnailKey, thumbnail, 'image/webp');
+      const claimed = await prisma.mediaAsset.updateMany({
+        where: { id: asset.id, OR: [{ thumbnailKey: null }, { thumbnailKey: asset.thumbnailKey }] },
+        data: { thumbnailKey }
+      });
+      if (claimed.count) return { asset: { ...asset, thumbnailKey }, object: await mediaStorage.read(thumbnailKey), contentType: 'image/webp' };
+      const current = await prisma.mediaAsset.findUnique({ where: { id: asset.id }, select: { thumbnailKey: true } });
+      if (current?.thumbnailKey) return { asset: { ...asset, thumbnailKey: current.thumbnailKey }, object: await mediaStorage.read(current.thumbnailKey), contentType: 'image/webp' };
+    } catch {
+      // Preserve access to legacy assets even if a provider temporarily cannot create a derivative.
+    }
+    return { asset, object: await mediaStorage.read(asset.storageKey), contentType: asset.mimeType };
   }
 };

@@ -239,10 +239,15 @@ describe('relationshipService', () => {
   it('faz getGraph() devolver ao jogador apenas nós e relações do subconjunto acessível', async () => {
     mocks.getCampaignAccess.mockResolvedValue({ role: 'PLAYER', user: { id: 'player-1' } });
     mocks.campaignMemberFindUnique.mockResolvedValue({ audience: 'P1' });
-    mocks.campaignFileFindMany.mockResolvedValueOnce([{ id: 'file-a' }, { id: 'file-b' }]).mockResolvedValueOnce([{ id: 'file-a', name: 'Pista A', type: 'CLUE' }, { id: 'file-b', name: 'NPC B', type: 'NPC' }]);
+    mocks.campaignFileFindMany.mockResolvedValueOnce([{ id: 'file-a' }, { id: 'file-b' }]).mockResolvedValueOnce([
+      { id: 'file-a', name: 'Pista A', type: 'CLUE', mediaReferences: [{ purpose: 'PRIMARY', asset: { id: 'asset-publico', displayName: 'Pista', altText: 'Pista ilustrada', width: 640, height: 480 } }] },
+      { id: 'file-b', name: 'NPC B', type: 'NPC', mediaReferences: [] }
+    ]);
     mocks.relationshipFindMany.mockResolvedValue([]);
     const graph = await relationshipService.getGraph('campaign-1');
     expect(mocks.relationshipFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: { campaignId: 'campaign-1', visibility: { in: ['ALL', 'P1'] }, fromId: { in: ['file-a', 'file-b'] }, toId: { in: ['file-a', 'file-b'] } } }));
+    expect(mocks.campaignFileFindMany).toHaveBeenNthCalledWith(2, expect.objectContaining({ select: expect.objectContaining({ mediaReferences: expect.objectContaining({ where: { purpose: { in: ['PRIMARY', 'COVER'] }, asset: { visibility: 'PUBLISHED' } } }) }) }));
+    expect(graph.nodes[0]).toMatchObject({ id: 'file-a', image: { id: 'asset-publico' } });
     expect(graph.nodes).toHaveLength(2);
   });
 
@@ -255,7 +260,16 @@ describe('relationshipService', () => {
 
     expect(mocks.campaignFileFindMany).toHaveBeenCalledWith({
       where: { campaignId: 'campaign-1', isArchived: false, isTrashed: false },
-      select: { id: true, name: true, type: true }
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        mediaReferences: {
+          where: { purpose: { in: ['PRIMARY', 'COVER'] } },
+          select: { purpose: true, asset: { select: { id: true, displayName: true, altText: true, width: true, height: true } } },
+          take: 2
+        }
+      }
     });
     expect(mocks.relationshipFindMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { campaignId: 'campaign-1', fromId: { in: ['file-a'] }, toId: { in: ['file-a'] } }
@@ -270,7 +284,16 @@ describe('relationshipService', () => {
 
     expect(mocks.campaignFileFindMany).toHaveBeenCalledWith({
       where: { campaignId: 'campaign-1', isArchived: false, isTrashed: false, id: { in: ['file-a', 'file-b'] } },
-      select: { id: true, name: true, type: true }
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        mediaReferences: {
+          where: { purpose: { in: ['PRIMARY', 'COVER'] } },
+          select: { purpose: true, asset: { select: { id: true, displayName: true, altText: true, width: true, height: true } } },
+          take: 2
+        }
+      }
     });
   });
 
@@ -285,7 +308,16 @@ describe('relationshipService', () => {
 
     expect(mocks.campaignFileFindMany).toHaveBeenNthCalledWith(2, {
       where: { campaignId: 'campaign-1', isArchived: false, isTrashed: false, id: { in: ['file-a'] } },
-      select: { id: true, name: true, type: true }
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        mediaReferences: {
+          where: { purpose: { in: ['PRIMARY', 'COVER'] }, asset: { visibility: 'PUBLISHED' } },
+          select: { purpose: true, asset: { select: { id: true, displayName: true, altText: true, width: true, height: true } } },
+          take: 2
+        }
+      }
     });
   });
 });

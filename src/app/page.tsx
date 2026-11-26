@@ -7,6 +7,8 @@ import { SessionControls } from '@/components/SessionControls';
 import { SYSTEM_LABELS } from '@/types';
 import styles from './page.module.css';
 
+/* eslint-disable @next/next/no-img-element -- campaign covers remain legacy external URLs. */
+
 export const dynamic = 'force-dynamic';
 
 async function getHomeData() {
@@ -46,6 +48,7 @@ export default async function HomePage() {
         <div className={styles.grid}>
           {campaigns.map((campaign) => (
             <Link key={campaign.id} href={`/campaigns/${campaign.id}` as never} className={styles.card}>
+              {campaign.coverImage && <img className={styles.cardImage} src={campaign.coverImage} alt="" loading="lazy" />}
               <span className={styles.systemBadge}>{SYSTEM_LABELS[campaign.system]}</span>
               <div className={styles.cardName}>{campaign.name}</div>
               {campaign.description && (

@@ -15,6 +15,7 @@ Use `.env.example` como contrato:
 - `NEXT_PUBLIC_PERFORMANCE_LOGS`: reservado no exemplo; não substitui `PERFORMANCE_LOGS` no código atual.
 - `BLOB_READ_WRITE_TOKEN`: acesso a um Vercel Blob Store **privado** para a biblioteca de mídia.
 - `MEDIA_MAX_IMAGE_BYTES`, `MEDIA_MAX_UPLOAD_FILES`, `MEDIA_MAX_IMAGE_PIXELS`: limites opcionais de upload.
+- `MEDIA_THUMBNAIL_MAX_SIDE`: maior lado da miniatura WebP privada (480 por padrão).
 
 Nunca publique valores, tokens ou `.env.local`.
 

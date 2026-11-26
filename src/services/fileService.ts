@@ -85,22 +85,28 @@ function sanitizePlayerMapData(data: Prisma.JsonValue): Prisma.JsonValue {
   if (!map || typeof map !== 'object' || Array.isArray(map)) return data;
 
   const mapRecord = map as Prisma.JsonObject;
-  const layers = Array.isArray(mapRecord.layers) ? mapRecord.layers.filter((layer) => {
+  const allLayers = Array.isArray(mapRecord.layers) ? mapRecord.layers : [];
+  const layerIds = new Set(allLayers.map((layer) => {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return null;
+    const id = (layer as Prisma.JsonObject).id;
+    return typeof id === 'string' ? id : null;
+  }).filter((id): id is string => id !== null));
+  const layers = allLayers.filter((layer) => {
     if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return false;
     return (layer as Prisma.JsonObject).access !== 'PRIVATE';
-  }) : [];
+  });
   const visibleLayerIds = new Set(layers.map((layer) => (layer as Prisma.JsonObject).id).filter((id): id is string => typeof id === 'string'));
   const markers = Array.isArray(mapRecord.markers) ? mapRecord.markers.filter((marker) => {
     if (!marker || typeof marker !== 'object' || Array.isArray(marker)) return false;
     const markerRecord = marker as Prisma.JsonObject;
     const layerId = markerRecord.layerId;
-    return markerRecord.visibility === 'PUBLISHED' && (typeof layerId !== 'string' || visibleLayerIds.size === 0 || visibleLayerIds.has(layerId));
+    return markerRecord.visibility === 'PUBLISHED' && (typeof layerId !== 'string' || layerIds.size === 0 || visibleLayerIds.has(layerId));
   }) : [];
   const geometries = Array.isArray(mapRecord.geometries) ? mapRecord.geometries.filter((geometry) => {
     if (!geometry || typeof geometry !== 'object' || Array.isArray(geometry)) return false;
     const geometryRecord = geometry as Prisma.JsonObject;
     const layerId = geometryRecord.layerId;
-    return geometryRecord.visibility === 'PUBLISHED' && (typeof layerId !== 'string' || visibleLayerIds.size === 0 || visibleLayerIds.has(layerId));
+    return geometryRecord.visibility === 'PUBLISHED' && (typeof layerId !== 'string' || layerIds.size === 0 || visibleLayerIds.has(layerId));
   }) : [];
 
   return { ...dataRecord, map: { ...mapRecord, layers, markers, geometries } };

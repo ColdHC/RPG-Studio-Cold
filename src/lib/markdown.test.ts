@@ -26,4 +26,14 @@ describe('document markdown renderer', () => {
     expect(html).toContain('src="/api/media/asset-1"');
     expect(html).not.toContain('javascript:alert');
   });
+
+  it('renders constrained image presentation metadata without accepting arbitrary styles', () => {
+    const html = markdownToHtml('![Mapa de batalha](/api/media/asset-1){align=right width=55 caption="Visão do porto"}');
+
+    expect(html).toContain('<figure class="rpgImageFigure"');
+    expect(html).toContain('data-align="right"');
+    expect(html).toContain('data-width="55"');
+    expect(html).toContain('<figcaption>Visão do porto</figcaption>');
+    expect(html).not.toContain('style="color:');
+  });
 });

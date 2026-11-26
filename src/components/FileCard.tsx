@@ -6,6 +6,7 @@ import { FileTypeIcon } from './fileTypeIcon';
 import { TagChip } from './TagChip';
 import type { CampaignFile } from '@/types';
 import { FILE_TYPE_LABELS } from '@/types';
+import { mediaDeliveryUrl } from '@/lib/mediaUrl';
 import styles from './FileCard.module.css';
 
 interface FileCardProps {
@@ -38,7 +39,7 @@ export function FileCard({ file, selected, onOpen, onSelectToggle, onToggleFavor
       draggable
       onDragStart={(e) => e.dataTransfer.setData('text/file-id', file.id)}
     >
-      {image && <div className={styles.image}><img src={`/api/media/${image.id}`} alt={image.altText || image.displayName} loading="lazy" /></div>}
+      {image && <div className={styles.image}><img src={mediaDeliveryUrl(image.id, 'thumbnail')} alt={image.altText || image.displayName} loading="lazy" width={image.width ?? undefined} height={image.height ?? undefined} /></div>}
       <div className={styles.topRow}>
         <input
           type="checkbox"

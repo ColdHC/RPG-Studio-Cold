@@ -16,9 +16,9 @@
 | Import/export | Completa | `campaignTransferService` | uploads grandes continuam externos |
 | Autenticação e convites | Completa | `auth`, `access`, rotas `/auth` | sessões e rate limit dependem da operação |
 | Temas por campanha | Implementada na fork | `campaignThemeService`, `AppearanceEditor` | imagens são data URLs; rascunho não é público |
-| Biblioteca de mídia | Implementada com configuração externa | `mediaService`, `MediaLibrary`, `MediaPicker` | exige Blob privado para upload; não migra anexos legados |
-| Leitura visual de documentos | Implementada | capa/primary/gallery por `MediaReference`, `ImageLightbox` | imagens no Markdown permanecem deliberadamente simples |
-| Visualizador de mapas | Implementada parcialmente | `MapStudio`, `CampaignFile.data.map` | inclui geometrias básicas; não inclui clustering ou tiling |
+| Biblioteca de mídia | Implementada com configuração externa | `mediaService`, `MediaLibrary`, `MediaPicker` | gera thumbnails WebP privadas; não migra anexos legados |
+| Leitura visual de documentos | Implementada | capa/primary/gallery por `MediaReference`, `ImageLightbox` | imagens no Markdown usam apresentação segura e limitada |
+| Visualizador de mapas | Implementada parcialmente | `MapStudio`, `CampaignFile.data.map` | inclui geometrias com edição de vértices e preview de marcadores; não inclui clustering ou tiling |
 | Busca global | Completa | `/api/search` | performance depende do volume de JSON |
 
 ## Temas
