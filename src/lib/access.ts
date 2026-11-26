@@ -25,8 +25,7 @@ export type CampaignAccess = {
 
 type AccessOptions = { write?: boolean };
 
-export async function getCampaignAccess(campaignId: string, options: AccessOptions = {}): Promise<CampaignAccess> {
-  const user = await requireUser();
+export async function getCampaignAccessForUser(user: PublicUser, campaignId: string, options: AccessOptions = {}): Promise<CampaignAccess> {
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     select: { id: true, ownerId: true, isArchived: true }
@@ -42,6 +41,10 @@ export async function getCampaignAccess(campaignId: string, options: AccessOptio
   if (!membership) throw new AccessDeniedError();
   if (options.write) throw new AccessDeniedError('Jogadores têm acesso somente de leitura.', 403);
   return { campaign, role: 'PLAYER', user };
+}
+
+export async function getCampaignAccess(campaignId: string, options: AccessOptions = {}): Promise<CampaignAccess> {
+  return getCampaignAccessForUser(await requireUser(), campaignId, options);
 }
 
 export async function assertCampaignAccess(campaignId: string, options: AccessOptions = {}) {

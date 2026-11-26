@@ -125,21 +125,25 @@ enum SessionPlanningStatus {
 }
 
 model User {
-  id             String              @id @default(cuid())
-  name           String
-  email          String              @unique
-  passwordHash   String?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @default(now()) @updatedAt
-  ownedCampaigns Campaign[]          @relation("CampaignOwner")
-  memberships    CampaignMember[]
-  authSessions   AuthSession[]
-  sentInvites    CampaignInvite[]    @relation("InviteSender")
-  fileGrants     CampaignFileGrant[]
-  auditEvents    AuditEvent[]        @relation("AuditActor")
-  campaignThemes CampaignTheme[]     @relation("ThemeCreator")
-  themePresets   ThemePreset[]
-  uploadedMedia  MediaAsset[]        @relation("MediaUploader")
+  id                    String                 @id @default(cuid())
+  name                  String
+  email                 String                 @unique
+  passwordHash          String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @default(now()) @updatedAt
+  ownedCampaigns        Campaign[]             @relation("CampaignOwner")
+  memberships           CampaignMember[]
+  authSessions          AuthSession[]
+  sentInvites           CampaignInvite[]       @relation("InviteSender")
+  fileGrants            CampaignFileGrant[]
+  auditEvents           AuditEvent[]           @relation("AuditActor")
+  campaignThemes        CampaignTheme[]        @relation("ThemeCreator")
+  themePresets          ThemePreset[]
+  uploadedMedia         MediaAsset[]           @relation("MediaUploader")
+  mcpConnections        McpConnection[]
+  mcpAuthorizationCodes McpAuthorizationCode[]
+  mcpAccessTokens       McpAccessToken[]
+  mcpRefreshTokens      McpRefreshToken[]
 }
 
 model Campaign {
@@ -184,6 +188,7 @@ model Campaign {
   briefing                 CampaignBriefing?
   themes                   CampaignTheme[]           @relation("CampaignThemes")
   media                    MediaAsset[]
+  mcpCampaignGrants        McpCampaignGrant[]
 
   @@index([ownerId])
 }
@@ -852,4 +857,143 @@ model CampaignInvite {
 
   @@index([campaignId, status])
   @@index([inviteeEmail, status])
+}
+
+// ---------- MCP / OAuth 2.1 ----------
+// Read-only MCP access is opt-in per user and per campaign. Opaque tokens are
+// stored only as SHA-256 hashes so a database leak cannot be replayed.
+
+model McpOAuthClient {
+  id                      String    @id @default(cuid())
+  clientId                String    @unique
+  clientName              String
+  redirectUris            String[]
+  grantTypes              String[]
+  responseTypes           String[]
+  allowedScopes           String[]
+  tokenEndpointAuthMethod String    @default("none")
+  clientUri               String?
+  logoUri                 String?
+  contacts                String[]
+  isActive                Boolean   @default(true)
+  createdAt               DateTime  @default(now())
+  lastUsedAt              DateTime?
+
+  authorizationCodes McpAuthorizationCode[]
+  connections        McpConnection[]
+  accessTokens       McpAccessToken[]
+  refreshTokens      McpRefreshToken[]
+
+  @@index([createdAt])
+}
+
+model McpAuthorizationCode {
+  id                  String    @id @default(cuid())
+  codeHash            String    @unique
+  clientId            String
+  userId              String
+  redirectUri         String
+  scopes              String[]
+  codeChallenge       String
+  codeChallengeMethod String    @default("S256")
+  resource            String
+  campaignIds         String[]
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  createdAt           DateTime  @default(now())
+
+  client McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model McpConnection {
+  id         String    @id @default(cuid())
+  userId     String
+  clientId   String
+  scopes     String[]
+  resource   String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         McpOAuthClient     @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  campaignGrants McpCampaignGrant[]
+  accessTokens   McpAccessToken[]
+  refreshTokens  McpRefreshToken[]
+
+  @@index([userId, createdAt])
+  @@index([clientId])
+}
+
+model McpCampaignGrant {
+  id           String    @id @default(cuid())
+  connectionId String
+  campaignId   String
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  connection McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  campaign   Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, campaignId])
+  @@index([campaignId])
+}
+
+model McpAccessToken {
+  id           String    @id @default(cuid())
+  tokenHash    String    @unique
+  connectionId String
+  userId       String
+  clientId     String
+  scopes       String[]
+  resource     String
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?
+
+  connection McpConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client     McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model McpRefreshToken {
+  id           String    @id @default(cuid())
+  tokenHash    String    @unique
+  connectionId String
+  userId       String
+  clientId     String
+  scopes       String[]
+  resource     String
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  rotatedAt    DateTime?
+  revokedAt    DateTime?
+
+  connection McpConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client     McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([expiresAt])
+}
+
+model McpRateLimit {
+  id          String   @id @default(cuid())
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([key, windowStart])
+  @@index([expiresAt])
 }

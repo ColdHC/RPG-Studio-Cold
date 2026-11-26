@@ -1,13 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { authApi } from '@/lib/api';
 import styles from './AuthForm.module.css';
 
+function safeNext(value: string | null) {
+  if (!value) return '/';
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    return '/';
+  }
+  if (!decoded.startsWith('/') || decoded.startsWith('//') || decoded.includes('\\')) return '/';
+  if (/[\u0000-\u001f\u007f]/.test(decoded)) return '/';
+  return decoded;
+}
+
 export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +39,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       } else {
         await authApi.login({ email, password });
       }
-      router.push('/');
+      router.push(safeNext(searchParams?.get('next') ?? null) as never);
       router.refresh();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : 'Erro inesperado.');
